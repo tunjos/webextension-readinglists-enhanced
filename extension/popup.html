@@ -6,21 +6,96 @@
   </head>
   <body>
     <div id="listSelectionContainer" style="display:none">
-      <p id="listIntro">Choose a reading list</p>
+      <div class="headerRow">
+        <p id="listIntro">Choose a reading list</p>
+        <div class="headerActions">
+          <button id="exportReadingListsButton" type="button" class="headerIconButton" aria-label="Export reading lists" title="Export reading lists">
+            <span class="exportReadingListsIcon"></span>
+          </button>
+          <button id="createReadingListButton" type="button" class="headerIconButton" aria-label="Create a new reading list" title="Create a new reading list">
+            <span class="createReadingListIcon"></span>
+          </button>
+          <button id="updateReadingListButton" type="button" class="headerIconButton" aria-label="Update a reading list" title="Update a reading list">
+            <span class="updateReadingListIcon"></span>
+          </button>
+          <button id="deleteReadingListButton" type="button" class="headerIconButton" aria-label="Delete a reading list" title="Delete a reading list">
+            <span class="deleteReadingListIcon"></span>
+          </button>
+        </div>
+      </div>
       <input id="listSearchInput" type="text" placeholder="Search reading lists"/>
       <div id="listLoading" class="status">Loading reading lists...</div>
       <div id="listStatus" class="status" style="display:none"></div>
       <div id="listEmpty" class="status" style="display:none">No lists found.</div>
       <ul id="listResults"></ul>
     </div>
+    <div id="createListContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="createListBackButton" type="button" class="subviewBackButton">Back</button>
+        <p>Create a reading list</p>
+      </div>
+      <input id="createListNameInput" type="text" placeholder="Reading list name"/>
+      <textarea id="createListDescriptionInput" placeholder="Description (optional)"></textarea>
+      <div id="createListStatus" class="status" style="display:none"></div>
+      <button id="createListSubmitButton" type="button" class="primaryButton">Create list</button>
+    </div>
+    <div id="updateListContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="updateListBackButton" type="button" class="subviewBackButton">Back</button>
+        <p>Update a reading list</p>
+      </div>
+      <input id="updateListNameInput" type="text" placeholder="Reading list name"/>
+      <textarea id="updateListDescriptionInput" placeholder="Description (optional)"></textarea>
+      <div id="updateListStatus" class="status" style="display:none"></div>
+      <button id="updateListSubmitButton" type="button" class="primaryButton">Update list</button>
+    </div>
+    <div id="listEntriesContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="listEntriesBackButton" type="button" class="subviewBackButton">Back</button>
+        <p id="listEntriesTitle"></p>
+        <button id="exportListEntriesButton" type="button" class="headerIconButton subviewHeaderIconButton" aria-label="Export this reading list" title="Export this reading list">
+          <span class="exportReadingListsIcon"></span>
+        </button>
+      </div>
+      <input id="listEntriesSearchInput" type="text" placeholder="Search articles"/>
+      <div id="listEntriesLoading" class="status" style="display:none">Loading articles...</div>
+      <div id="listEntriesStatus" class="status" style="display:none"></div>
+      <div id="listEntriesEmpty" class="status" style="display:none">No articles found.</div>
+      <ul id="listEntriesResults"></ul>
+    </div>
+    <div id="articleSummaryContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="articleSummaryBackButton" type="button" class="subviewBackButton">Back</button>
+        <p id="articleSummaryTitle"></p>
+      </div>
+      <div id="articleSummaryLoading" class="status" style="display:none">Loading summary...</div>
+      <div id="articleSummaryStatus" class="status" style="display:none"></div>
+      <div id="articleSummaryBody"></div>
+    </div>
+    <div id="moveEntryContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="moveEntryBackButton" type="button" class="subviewBackButton">Back</button>
+        <p id="moveEntryTitle"></p>
+      </div>
+      <input id="moveEntrySearchInput" type="text" placeholder="Search reading lists"/>
+      <div id="moveEntryStatus" class="status" style="display:none"></div>
+      <div id="moveEntryEmpty" class="status" style="display:none">No lists found.</div>
+      <ul id="moveEntryResults"></ul>
+    </div>
     <div id="loginPromptContainer" style="display:none">
       <p id="loginPromptText"></p>
       <button id="loginButton"></button>
     </div>
     <div id="addToListSuccessContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="successBackButton" type="button" class="subviewBackButton">Back</button>
+      </div>
       <p id="successText"></p>
     </div>
     <div id="addToListFailedContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="failureBackButton" type="button" class="subviewBackButton">Back</button>
+      </div>
       <p id="failureReason"></p>
       <p id="learnMoreLinkContainer" style="display:none">
         <a id="learnMoreLink" href="https://www.mediawiki.org/wiki/Wikimedia_Apps/Synced_Reading_Lists"></a>
