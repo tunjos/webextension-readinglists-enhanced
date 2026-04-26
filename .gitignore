@@ -1,2 +1,5 @@
 node_modules/
 .DS_Store
+
+# Ignore browser extension zip files
+Wikipedia-Reading-Lists-Enhanced_*.zip

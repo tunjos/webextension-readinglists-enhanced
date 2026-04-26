@@ -27,24 +27,61 @@ body {
   max-height: 220px;
   overflow-y: auto;
 }
-.listButton {
+.listRow {
   width: 100%;
-  text-align: left;
+  box-sizing: border-box;
   background: #f8f9fa;
   border: 1px solid #eaecf0;
   border-radius: 4px;
-  padding: 8px 10px;
   margin-bottom: 6px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+  padding: 7px 10px;
+}
+.listButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  font-size: 0.95em;
+}
+.listButton:disabled {
+  opacity: 1;
 }
 .listMeta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+.listMetaBadges {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.listMetaSizeColumn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 2.75em;
+}
+.listMetaActionColumn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  min-height: 18px;
 }
 .listSavedIcon {
   width: 8px;
@@ -54,16 +91,37 @@ body {
   background-size: contain;
   flex: 0 0 auto;
 }
-.listButton:hover {
+.listSavedIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+.listSavedIconButton:hover {
   background: #fff;
   border-color: #c8ccd1;
 }
-.listButton:disabled {
-  opacity: 0.6;
+.listSavedIconButton:focus-visible {
+  outline: 2px solid #36c;
+  outline-offset: 1px;
+}
+.listSavedIconButton:disabled {
   cursor: default;
+  opacity: 0.6;
+}
+.listRow:hover {
+  background: #fff;
+  border-color: #c8ccd1;
 }
 .listName {
   font-weight: 600;
+  font-size: 0.95em;
 }
 .listDefaultTag {
   font-size: 0.8em;
@@ -73,16 +131,44 @@ body {
   padding: 1px 6px;
 }
 .listSizeTag {
-  font-size: 0.8em;
+  display: inline-block;
+  min-width: 2em;
+  text-align: center;
+  font-size: 0.78em;
   color: #54595d;
   border: 1px solid #c8ccd1;
   border-radius: 10px;
-  padding: 1px 6px;
+  padding: 1px 5px;
 }
 .status {
   color: #54595d;
   font-size: 0.9em;
   margin-top: 6px;
+}
+#listLoading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+#listLoading::before {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #c8ccd1;
+  border-top-color: #36c;
+  border-radius: 50%;
+  animation: listLoadingSpinner 0.75s linear infinite;
+  flex: 0 0 auto;
+}
+@keyframes listLoadingSpinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 #addToListSuccessContainer:before {
   content: "";

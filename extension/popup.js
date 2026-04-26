@@ -5,7 +5,9 @@ const MESSAGE_KEYS = {
   infoLinkText: "readinglists-browser-extension-info-link-text",
   loginButtonText: "login",
   loginPrompt: "readinglists-browser-login-prompt",
-  success: "readinglists-browser-add-entry-success"
+  addSuccess: "readinglists-browser-add-entry-success",
+  removeSuccess: "readinglists-browser-remove-entry-success",
+  unsupportedPage: "readinglists-browser-unsupported-page"
 };
 
 const ALLMESSAGES_QUERY = {
@@ -18,11 +20,28 @@ const ALLMESSAGES_QUERY = {
 
 let allReadingLists = [];
 let listSelectionContext = null;
+const SUPPORTED_HOSTS = ["wikipedia.org", "wikivoyage.org"];
+const SUPPORTED_NAMESPACES = [0];
 
 function objToQueryString(obj) {
   return Object.keys(obj)
     .map(key => `${key}=${obj[key]}`)
     .join("&");
+}
+
+function isSupportedHost(hostname) {
+  return SUPPORTED_HOSTS.some(host => hostname.endsWith(host));
+}
+
+function isSavablePage(path, params) {
+  return (
+    path.includes("/wiki/") ||
+    (path.includes("index.php") && params.has("title"))
+  );
+}
+
+function isSupportedNamespace(ns) {
+  return SUPPORTED_NAMESPACES.includes(ns);
 }
 
 function getReadingListsUrlForOrigin(origin, rlcontinue) {
@@ -37,6 +56,20 @@ function readingListPostEntryUrlForOrigin(origin, listId, token) {
   return `${origin}/api/rest_v1/data/lists/${listId}/entries/?csrf_token=${encodeURIComponent(
     token
   )}`;
+}
+
+function readingListEntriesUrlForOrigin(origin, listId, rlecontinue) {
+  let result = `${origin}/w/api.php?action=query&list=readinglistentries&rlelists=${encodeURIComponent(
+    listId
+  )}&rlelimit=max&format=json`;
+  if (rlecontinue) {
+    result = result.concat(`&rlecontinue=${encodeURIComponent(rlecontinue)}`);
+  }
+  return result;
+}
+
+function readingListDeleteEntryUrlForOrigin(origin) {
+  return `${origin}/w/api.php?action=readinglists&command=deleteentry&format=json`;
 }
 
 function readingListEntryLookupUrlForOrigin(origin, title, project) {
@@ -87,16 +120,24 @@ function geti18nMessages(origin, keys) {
       }
     })
     .then(res => {
+      const result = {};
       if (res.query && res.query.allmessages && res.query.allmessages.length) {
-        const result = {};
         res.query.allmessages.forEach(messageObj => {
-          result[messageObj.name] = messageObj.content;
+          if (
+            messageObj &&
+            messageObj.name &&
+            messageObj.content &&
+            !/^⧼.+⧽$/.test(messageObj.content)
+          ) {
+            result[messageObj.name] = messageObj.content;
+          }
         });
-        return result;
-      } else {
-        return getBundledMessage("en", keys);
       }
-    });
+      return getBundledMessage("en", keys).then(bundled =>
+        Object.assign({}, bundled, result)
+      );
+    })
+    .catch(() => getBundledMessage("en", keys));
 }
 
 function getCurrentTab() {
@@ -212,6 +253,8 @@ function renderReadingLists() {
   listEmpty.style.display = "none";
   filtered.forEach(list => {
     const listItem = document.createElement("li");
+    const listRow = document.createElement("div");
+    listRow.className = "listRow";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "listButton";
@@ -225,42 +268,79 @@ function renderReadingLists() {
     const meta = document.createElement("span");
     meta.className = "listMeta";
 
+    const badges = document.createElement("span");
+    badges.className = "listMetaBadges";
+
     if (list.default) {
       const defaultTag = document.createElement("span");
       defaultTag.className = "listDefaultTag";
       defaultTag.textContent = "Default";
-      meta.appendChild(defaultTag);
+      badges.appendChild(defaultTag);
     }
 
+    const sizeColumn = document.createElement("span");
+    sizeColumn.className = "listMetaSizeColumn";
     if (typeof list.size === "number") {
       const sizeTag = document.createElement("span");
       sizeTag.className = "listSizeTag";
       sizeTag.textContent = `${list.size}`;
-      meta.appendChild(sizeTag);
+      sizeColumn.appendChild(sizeTag);
     }
+
+    const actionColumn = document.createElement("span");
+    actionColumn.className = "listMetaActionColumn";
+    if (list.hasEntry) {
+      const savedIcon = document.createElement("button");
+      savedIcon.type = "button";
+      savedIcon.className = "listSavedIconButton";
+      savedIcon.title = "Remove from this list";
+      savedIcon.setAttribute("aria-label", "Remove from this list");
+      const savedIconGlyph = document.createElement("span");
+      savedIconGlyph.className = "listSavedIcon";
+      savedIcon.appendChild(savedIconGlyph);
+      savedIcon.addEventListener("click", event => {
+        event.stopPropagation();
+        handleSavedListRemoval(list);
+      });
+      actionColumn.appendChild(savedIcon);
+    }
+
+    if (badges.childNodes.length) {
+      meta.appendChild(badges);
+    }
+    meta.appendChild(sizeColumn);
+    meta.appendChild(actionColumn);
 
     if (list.hasEntry) {
-      const savedIcon = document.createElement("span");
-      savedIcon.className = "listSavedIcon";
-      savedIcon.title = "Saved in this list";
-      meta.appendChild(savedIcon);
+      button.addEventListener("click", () => {});
+    } else {
+      button.addEventListener("click", () => handleListSelection(list));
     }
-
-    if (meta.childNodes.length) {
-      button.appendChild(meta);
-    }
-
-    button.addEventListener("click", () => handleListSelection(list));
-    listItem.appendChild(button);
+    listRow.appendChild(button);
+    listRow.appendChild(meta);
+    listItem.appendChild(listRow);
     listResults.appendChild(listItem);
   });
 }
 
 function setListUiDisabled(disabled) {
   document.getElementById("listSearchInput").disabled = disabled;
-  document.querySelectorAll(".listButton").forEach(button => {
-    button.disabled = disabled;
-  });
+  document
+    .querySelectorAll(".listButton, .listSavedIconButton")
+    .forEach(button => {
+      button.disabled = disabled;
+    });
+}
+
+function setListSelectionContextEntries(listId, hasEntry) {
+  allReadingLists = allReadingLists.map(list =>
+    list.id === listId ? Object.assign({}, list, { hasEntry }) : list
+  );
+  renderReadingLists();
+}
+
+function setSavedRowUiState(listId, hasEntry) {
+  setListSelectionContextEntries(listId, hasEntry);
 }
 
 function showListSelection() {
@@ -300,8 +380,8 @@ function showLoginPrompt(tab, url) {
   );
 }
 
-function showAddToListSuccessMessage(tab, url, list) {
-  return geti18nMessages(url.origin, [MESSAGE_KEYS.success]).then(messages =>
+function showListEntrySuccessMessage(tab, url, list, messageKey) {
+  return geti18nMessages(url.origin, [messageKey]).then(messages =>
     getCanonicalPageTitle(tab).then(title => {
       hide("listSelectionContainer");
       const placeholder = "$1";
@@ -311,7 +391,7 @@ function showAddToListSuccessMessage(tab, url, list) {
       titleElem.className = "successTitle";
       titleElem.textContent = titleText;
       const listName = list && list.name ? list.name : "reading list";
-      let message = messages[MESSAGE_KEYS.success];
+      let message = messages[messageKey];
       message = message.replace(/<[^>]+>/g, "");
       message = message
         .replace(/\[\[\$2\|\$3\]\]/g, listName)
@@ -372,6 +452,18 @@ function showAddToListFailureMessage(url, res) {
   });
 }
 
+function showUnsupportedPageMessage() {
+  return getBundledMessage("en", [MESSAGE_KEYS.unsupportedPage]).then(messages => {
+    hide("listSelectionContainer");
+    hide("loginPromptContainer");
+    hide("addToListSuccessContainer");
+    document.getElementById("learnMoreLinkContainer").style.display = "none";
+    document.getElementById("failureReason").textContent =
+      messages[MESSAGE_KEYS.unsupportedPage];
+    show("addToListFailedContainer");
+  });
+}
+
 function mobileToCanonicalHost(url) {
   url.hostname = url.hostname.replace(/^m\./, "").replace(".m.", ".");
   return url;
@@ -394,8 +486,114 @@ function getAddToListPostOptions(url, title) {
 }
 
 function handleAddPageToListResult(tab, url, res, list) {
-  if (res.id) showAddToListSuccessMessage(tab, url, list);
-  else showAddToListFailureMessage(url, res);
+  if (res.id) {
+    setSavedRowUiState(list.id, true);
+    return showListEntrySuccessMessage(
+      tab,
+      url,
+      list,
+      MESSAGE_KEYS.addSuccess
+    );
+  }
+  return showAddToListFailureMessage(url, res);
+}
+
+function getDeleteEntryPostBody(entryId, token) {
+  return objToQueryString({
+    entry: encodeURIComponent(entryId),
+    token: encodeURIComponent(token)
+  });
+}
+
+function getDeleteEntryPostOptions(entryId, token) {
+  return {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
+    credentials: "same-origin",
+    body: getDeleteEntryPostBody(entryId, token)
+  };
+}
+
+function normalizeEntryTitle(title) {
+  return decodeURIComponent(title || "")
+    .replace(/ /g, "_")
+    .trim();
+}
+
+function getReadingListEntriesPage(url, listId, rlecontinue) {
+  return fetch(readingListEntriesUrlForOrigin(url.origin, listId, rlecontinue), {
+    credentials: "same-origin"
+  }).then(res => {
+    if (res.status < 200 || res.status > 399) {
+      return res.json().then(data => {
+        throw data;
+      });
+    }
+    return res.json();
+  });
+}
+
+function getAllReadingListEntries(url, listId, rlecontinue, entries) {
+  const combined = entries || [];
+  return getReadingListEntriesPage(url, listId, rlecontinue).then(res => {
+    const pageEntries =
+      res && res.query && res.query.readinglistentries
+        ? res.query.readinglistentries
+        : [];
+    const nextEntries = combined.concat(pageEntries);
+    const nextContinue =
+      res && res.continue && res.continue.rlecontinue
+        ? res.continue.rlecontinue
+        : null;
+    if (nextContinue) {
+      return getAllReadingListEntries(url, listId, nextContinue, nextEntries);
+    }
+    return nextEntries;
+  });
+}
+
+function findMatchingEntryId(url, listId, title) {
+  const normalizedTitle = normalizeEntryTitle(title);
+  const project = getProjectOrigin(url);
+  return getAllReadingListEntries(url, listId).then(entries => {
+    const matchingEntry = entries.find(entry => {
+      return (
+        entry.project === project &&
+        normalizeEntryTitle(entry.title) === normalizedTitle
+      );
+    });
+    if (!matchingEntry || typeof matchingEntry.id === "undefined") {
+      throw new Error("Page is not saved in this reading list.");
+    }
+    return matchingEntry.id;
+  });
+}
+
+function handleRemovePageFromListResult(tab, url, res, list) {
+  if (!res || !res.error) {
+    setSavedRowUiState(list.id, false);
+    return showListEntrySuccessMessage(
+      tab,
+      url,
+      list,
+      MESSAGE_KEYS.removeSuccess
+    );
+  }
+  return showAddToListFailureMessage(url, res.error || res);
+}
+
+function removePageFromList(tab, url, listId, token, list) {
+  return getCanonicalPageTitle(tab)
+    .then(title =>
+      findMatchingEntryId(url, listId, title).then(entryId =>
+        fetch(
+          readingListDeleteEntryUrlForOrigin(url.origin),
+          getDeleteEntryPostOptions(entryId, token)
+        )
+      )
+    )
+    .then(res => res.json())
+    .then(res => handleRemovePageFromListResult(tab, url, res, list));
 }
 
 function getCanonicalPageTitle(tab) {
@@ -422,6 +620,24 @@ function handleListSelection(list) {
   setListUiDisabled(true);
   setListStatus(`Saving to "${list.name}"...`);
   return addPageToList(
+    listSelectionContext.tab,
+    listSelectionContext.url,
+    list.id,
+    listSelectionContext.token,
+    list
+  )
+    .catch(err => showAddToListFailureMessage(listSelectionContext.url, err))
+    .finally(() => {
+      setListUiDisabled(false);
+      setListStatus("");
+    });
+}
+
+function handleSavedListRemoval(list) {
+  if (!listSelectionContext) return;
+  setListUiDisabled(true);
+  setListStatus(`Removing from "${list.name}"...`);
+  return removePageFromList(
     listSelectionContext.tab,
     listSelectionContext.url,
     list.id,
@@ -518,13 +734,34 @@ function handleClick(tab, url) {
   );
 }
 
+function isSupportedPage(tab) {
+  if (!tab || !tab.url) {
+    return Promise.resolve(false);
+  }
+
+  const url = new URL(tab.url);
+  if (!isSupportedHost(url.hostname) || !isSavablePage(url.pathname, url.searchParams)) {
+    return Promise.resolve(false);
+  }
+
+  return browser.tabs
+    .sendMessage(tab.id, { type: "wikiExtensionGetPageNamespace" })
+    .then(res => Boolean(res) && isSupportedNamespace(res.ns))
+    .catch(() => false);
+}
+
 document
   .getElementById("listSearchInput")
   .addEventListener("input", renderReadingLists);
 
 getCurrentTab().then(tab => {
   const url = new URL(tab.url);
-  return handleClick(tab, url).catch(err =>
-    showAddToListFailureMessage(url, err)
-  );
+  return isSupportedPage(tab).then(isSupported => {
+    if (!isSupported) {
+      return showUnsupportedPageMessage();
+    }
+    return handleClick(tab, url).catch(err =>
+      showAddToListFailureMessage(url, err)
+    );
+  });
 });

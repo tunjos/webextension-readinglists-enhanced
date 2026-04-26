@@ -1,9 +1,11 @@
 {
   "login": "Log in",
   "readinglists-browser-add-entry-success": "$1 saved to your reading list",
+  "readinglists-browser-remove-entry-success": "$1 removed from your reading list",
   "readinglists-browser-enable-sync-prompt": "Enable syncing on your Wikipedia app to begin saving articles",
   "readinglists-browser-error-intro": "An error has occurred: $1",
   "readinglists-browser-extension-info-link-text": "Learn more",
   "readinglists-browser-list-entry-limit-exceeded": "Article cannot be saved. You have reached the limit of $1 articles per list",
-  "readinglists-browser-login-prompt": "Log in to save articles"
+  "readinglists-browser-login-prompt": "Log in to save articles",
+  "readinglists-browser-unsupported-page": "This extension only works on supported Wikipedia and Wikivoyage article pages."
 }
