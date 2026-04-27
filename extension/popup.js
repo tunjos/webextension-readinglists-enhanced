@@ -20,6 +20,24 @@ const ALLMESSAGES_QUERY = {
   amenableparser: ""
 };
 
+const STORE_URLS = {
+  chrome:
+    "https://chromewebstore.google.com/detail/wikipedia-reading-lists-e/doffilahajodeickcekfabddhgbjafao",
+  edge:
+    "https://microsoftedge.microsoft.com/addons/detail/kocmjchplgfpkfbbcppecdendnledeod",
+  firefox:
+    "https://addons.mozilla.org/en-US/firefox/addon/wikipedia-reading-lists-enhanc/"
+};
+
+const SHARE_NETWORKS = [
+  { key: "x", label: "X", brand: "X" },
+  { key: "facebook", label: "Facebook", brand: "f" },
+  { key: "linkedin", label: "LinkedIn", brand: "in" },
+  { key: "reddit", label: "Reddit", brand: "r" },
+  { key: "telegram", label: "Telegram", brand: "T" },
+  { key: "whatsapp", label: "WhatsApp", brand: "W" }
+];
+
 let allReadingLists = [];
 let listSelectionContext = null;
 let currentViewedList = null;
@@ -51,6 +69,49 @@ function isSavablePage(path, params) {
 
 function isSupportedNamespace(ns) {
   return SUPPORTED_NAMESPACES.includes(ns);
+}
+
+function getCurrentBrowserStoreKey() {
+  const ua = navigator.userAgent || "";
+  if (ua.includes("Firefox/")) return "firefox";
+  if (ua.includes("Edg/")) return "edge";
+  return "chrome";
+}
+
+function getCurrentStoreUrl() {
+  return STORE_URLS[getCurrentBrowserStoreKey()];
+}
+
+function getCurrentStoreLabel() {
+  switch (getCurrentBrowserStoreKey()) {
+    case "firefox":
+      return "Firefox Add-ons";
+    case "edge":
+      return "Microsoft Edge Add-ons";
+    default:
+      return "Chrome Web Store";
+  }
+}
+
+function getShareUrl(networkKey, shareUrl, shareText) {
+  const encodedUrl = encodeURIComponent(shareUrl);
+  const encodedText = encodeURIComponent(shareText);
+  switch (networkKey) {
+    case "x":
+      return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+    case "facebook":
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+    case "linkedin":
+      return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+    case "reddit":
+      return `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}`;
+    case "telegram":
+      return `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+    case "whatsapp":
+      return `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+    default:
+      return shareUrl;
+  }
 }
 
 function getReadingListsUrlForOrigin(origin, rlcontinue) {
@@ -276,6 +337,10 @@ function setUpdateListStatus(text) {
   }
 }
 
+function setUtilityBarHidden(hidden) {
+  document.getElementById("utilityBar").style.display = hidden ? "none" : "flex";
+}
+
 function getEntryLimitFromError(res) {
   const candidates = [res && res.info, res && res.detail, res && res.message]
     .filter(Boolean)
@@ -304,6 +369,38 @@ function setArticleSummaryStatus(text) {
     status.textContent = "";
     status.style.display = "none";
   }
+}
+
+function renderShareTargets() {
+  const shareGrid = document.getElementById("shareGrid");
+  const shareUrl = getCurrentStoreUrl();
+  const shareText = "Check out Wikipedia Reading Lists Enhanced";
+  document.getElementById(
+    "shareIntroText"
+  ).textContent = `Share the current ${getCurrentStoreLabel()} listing:`;
+  shareGrid.textContent = "";
+  SHARE_NETWORKS.forEach(network => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "shareNetworkButton";
+    button.title = `Share on ${network.label}`;
+    button.setAttribute("aria-label", `Share on ${network.label}`);
+    button.addEventListener("click", () =>
+      browser.tabs.create({
+        url: getShareUrl(network.key, shareUrl, shareText)
+      })
+    );
+
+    const icon = document.createElement("span");
+    icon.className = "shareNetworkIcon";
+    icon.textContent = network.brand;
+    const label = document.createElement("span");
+    label.className = "shareNetworkLabel";
+    label.textContent = network.label;
+    button.appendChild(icon);
+    button.appendChild(label);
+    shareGrid.appendChild(button);
+  });
 }
 
 function normalizeListName(name) {
@@ -523,6 +620,10 @@ function refreshSavedListStatuses() {
 }
 
 function showListSelection() {
+  if (!listSelectionContext) {
+    showUnsupportedPageMessage();
+    return;
+  }
   if (isDeleteMode) {
     setDeleteMode(false);
   }
@@ -537,6 +638,9 @@ function showListSelection() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   show("listSelectionContainer");
 }
 
@@ -549,6 +653,9 @@ function showCreateListView() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   setCreateListStatus("");
   show("createListContainer");
 }
@@ -562,6 +669,9 @@ function showUpdateListView() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   setUpdateListStatus("");
   show("updateListContainer");
 }
@@ -575,6 +685,9 @@ function showListEntriesView() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   show("listEntriesContainer");
 }
 
@@ -587,6 +700,9 @@ function showArticleSummaryView() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   show("articleSummaryContainer");
 }
 
@@ -599,7 +715,41 @@ function showMoveEntryView() {
   hide("loginPromptContainer");
   hide("addToListSuccessContainer");
   hide("addToListFailedContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(false);
   show("moveEntryContainer");
+}
+
+function showShareView() {
+  hide("createListContainer");
+  hide("updateListContainer");
+  hide("listSelectionContainer");
+  hide("listEntriesContainer");
+  hide("articleSummaryContainer");
+  hide("moveEntryContainer");
+  hide("loginPromptContainer");
+  hide("addToListSuccessContainer");
+  hide("addToListFailedContainer");
+  hide("tutorialContainer");
+  renderShareTargets();
+  setUtilityBarHidden(true);
+  show("shareContainer");
+}
+
+function showTutorialView() {
+  hide("createListContainer");
+  hide("updateListContainer");
+  hide("listSelectionContainer");
+  hide("listEntriesContainer");
+  hide("articleSummaryContainer");
+  hide("moveEntryContainer");
+  hide("loginPromptContainer");
+  hide("addToListSuccessContainer");
+  hide("addToListFailedContainer");
+  hide("shareContainer");
+  setUtilityBarHidden(true);
+  show("tutorialContainer");
 }
 
 function showLoginPage(url, title) {
@@ -626,6 +776,9 @@ function showLoginPrompt(tab, url) {
       hide("listEntriesContainer");
       hide("articleSummaryContainer");
       hide("listSelectionContainer");
+      hide("shareContainer");
+      hide("tutorialContainer");
+      setUtilityBarHidden(false);
       document.getElementById("loginPromptText").textContent =
         messages[MESSAGE_KEYS.loginPrompt];
       document.getElementById("loginButton").textContent =
@@ -646,6 +799,9 @@ function showListEntrySuccessMessage(tab, url, list, messageKey) {
       hide("listEntriesContainer");
       hide("articleSummaryContainer");
       hide("listSelectionContainer");
+      hide("shareContainer");
+      hide("tutorialContainer");
+      setUtilityBarHidden(false);
       const placeholder = "$1";
       const successTextContainer = document.getElementById("successText");
       const titleText = decodeURIComponent(title).replace(/_/g, " ");
@@ -682,6 +838,9 @@ function showMoveEntrySuccessMessage(url, entry, targetList) {
     hide("listEntriesContainer");
     hide("articleSummaryContainer");
     hide("listSelectionContainer");
+    hide("shareContainer");
+    hide("tutorialContainer");
+    setUtilityBarHidden(false);
     const successTextContainer = document.getElementById("successText");
     const placeholder = "$1";
     const titleElem = document.createElement("span");
@@ -719,6 +878,9 @@ function showAddToListFailureMessage(url, res) {
     hide("listEntriesContainer");
     hide("articleSummaryContainer");
     hide("listSelectionContainer");
+    hide("shareContainer");
+    hide("tutorialContainer");
+    setUtilityBarHidden(false);
     document.getElementById("failureBackButton").style.display = "inline-flex";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     let message;
@@ -766,6 +928,9 @@ function showUnsupportedPageMessage() {
     hide("moveEntryContainer");
     hide("loginPromptContainer");
     hide("addToListSuccessContainer");
+    hide("shareContainer");
+    hide("tutorialContainer");
+    setUtilityBarHidden(false);
     document.getElementById("failureBackButton").style.display = "none";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     document.getElementById("failureReason").textContent =
@@ -1720,6 +1885,23 @@ document
   .addEventListener("click", showListSelection);
 document
   .getElementById("failureBackButton")
+  .addEventListener("click", showListSelection);
+document
+  .getElementById("shareUtilityButton")
+  .addEventListener("click", showShareView);
+document
+  .getElementById("rateUtilityButton")
+  .addEventListener("click", () =>
+    browser.tabs.create({ url: getCurrentStoreUrl() })
+  );
+document
+  .getElementById("tutorialUtilityButton")
+  .addEventListener("click", showTutorialView);
+document
+  .getElementById("shareBackButton")
+  .addEventListener("click", showListSelection);
+document
+  .getElementById("tutorialBackButton")
   .addEventListener("click", showListSelection);
 
 getCurrentTab().then(tab => {

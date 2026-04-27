@@ -9,6 +9,11 @@ body {
   max-width: 320px;
   min-height: 20px;
 }
+.subviewIntro {
+  margin: 8px 0 0 0;
+  color: #54595d;
+  font-size: 0.9em;
+}
 #listIntro {
   font-weight: bold;
   margin: 0;
@@ -43,7 +48,10 @@ body {
 }
 .headerIconButton:focus-visible,
 .primaryButton:focus-visible,
-#createListDescriptionInput:focus-visible {
+#createListDescriptionInput:focus-visible,
+#updateListDescriptionInput:focus-visible,
+.utilityButton:focus-visible,
+.shareNetworkButton:focus-visible {
   outline: 2px solid #36c;
   outline-offset: 1px;
 }
@@ -216,6 +224,93 @@ body {
   color: #202122;
   font-size: 0.95em;
   line-height: 1.45;
+}
+.shareGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.shareNetworkButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #eaecf0;
+  border-radius: 6px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.shareNetworkButton:hover {
+  background: #fff;
+  border-color: #c8ccd1;
+}
+.shareNetworkIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #36c;
+  color: #fff;
+  font-size: 0.75em;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.shareNetworkLabel {
+  font-size: 0.92em;
+  font-weight: 600;
+}
+.tutorialList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tutorialItem {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid #eaecf0;
+  border-radius: 6px;
+  background: #f8f9fa;
+  font-size: 0.9em;
+}
+.tutorialIcon {
+  align-self: center;
+  justify-self: center;
+}
+.utilityBar {
+  display: flex;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  margin-bottom: -4px;
+  border-top: 1px solid #eaecf0;
+}
+.utilityButton {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid #a2a9b1;
+  border-radius: 4px;
+  background: #fff;
+  color: #202122;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84em;
+  font-weight: 600;
+}
+.utilityButton:hover {
+  background: #f8f9fa;
+  border-color: #72777d;
 }
 .listRow {
   width: 100%;

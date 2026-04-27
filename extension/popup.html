@@ -82,6 +82,50 @@
       <div id="moveEntryEmpty" class="status" style="display:none">No lists found.</div>
       <ul id="moveEntryResults"></ul>
     </div>
+    <div id="shareContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="shareBackButton" type="button" class="subviewBackButton">Back</button>
+        <p>Share this extension</p>
+      </div>
+      <p id="shareIntroText" class="subviewIntro">Share the current browser store listing:</p>
+      <div id="shareGrid" class="shareGrid"></div>
+    </div>
+    <div id="tutorialContainer" style="display:none">
+      <div class="subviewHeader">
+        <button id="tutorialBackButton" type="button" class="subviewBackButton">Back</button>
+        <p>Tutorial</p>
+      </div>
+      <div class="tutorialList">
+        <div class="tutorialItem">
+          <span class="tutorialIcon listViewIcon"></span>
+          <div><strong>View list</strong><br/>Open a reading list to browse its saved articles or view the summary of a saved article.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon createReadingListIcon"></span>
+          <div><strong>Create list</strong><br/>Create a new reading list with a name and optional description.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon updateReadingListIcon"></span>
+          <div><strong>Update list</strong><br/>Pick a list and edit its name or description.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon deleteReadingListIcon"></span>
+          <div><strong>Delete list</strong><br/>Delete a reading list, with confirmation.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon exportReadingListsIcon"></span>
+          <div><strong>Export</strong><br/>Export all reading lists or the currently open list as JSON.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon listSavedIcon"></span>
+          <div><strong>Save / remove article</strong><br/>On the overview, click a list row to save the current page. Saved icons remove articles from lists.</div>
+        </div>
+        <div class="tutorialItem">
+          <span class="tutorialIcon moveArticleIcon"></span>
+          <div><strong>Move article</strong><br/>In a list, move an article into another reading list.</div>
+        </div>
+      </div>
+    </div>
     <div id="loginPromptContainer" style="display:none">
       <p id="loginPromptText"></p>
       <button id="loginButton"></button>
@@ -100,6 +144,11 @@
       <p id="learnMoreLinkContainer" style="display:none">
         <a id="learnMoreLink" href="https://www.mediawiki.org/wiki/Wikimedia_Apps/Synced_Reading_Lists"></a>
       </p>
+    </div>
+    <div id="utilityBar" class="utilityBar">
+      <button id="shareUtilityButton" type="button" class="utilityButton">Share</button>
+      <button id="rateUtilityButton" type="button" class="utilityButton">Rate</button>
+      <button id="tutorialUtilityButton" type="button" class="utilityButton">Tutorial</button>
     </div>
     <script type="application/javascript" src="dist/browser-polyfill.min.js"></script>
     <script type="application/javascript" src="popup.js"></script>
