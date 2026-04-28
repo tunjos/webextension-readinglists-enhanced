@@ -655,7 +655,7 @@ function showCreateListView() {
   hide("addToListFailedContainer");
   hide("shareContainer");
   hide("tutorialContainer");
-  setUtilityBarHidden(false);
+  setUtilityBarHidden(true);
   setCreateListStatus("");
   show("createListContainer");
 }
@@ -671,7 +671,7 @@ function showUpdateListView() {
   hide("addToListFailedContainer");
   hide("shareContainer");
   hide("tutorialContainer");
-  setUtilityBarHidden(false);
+  setUtilityBarHidden(true);
   setUpdateListStatus("");
   show("updateListContainer");
 }
@@ -687,7 +687,7 @@ function showListEntriesView() {
   hide("addToListFailedContainer");
   hide("shareContainer");
   hide("tutorialContainer");
-  setUtilityBarHidden(false);
+  setUtilityBarHidden(true);
   show("listEntriesContainer");
 }
 
@@ -702,7 +702,7 @@ function showArticleSummaryView() {
   hide("addToListFailedContainer");
   hide("shareContainer");
   hide("tutorialContainer");
-  setUtilityBarHidden(false);
+  setUtilityBarHidden(true);
   show("articleSummaryContainer");
 }
 
@@ -717,7 +717,7 @@ function showMoveEntryView() {
   hide("addToListFailedContainer");
   hide("shareContainer");
   hide("tutorialContainer");
-  setUtilityBarHidden(false);
+  setUtilityBarHidden(true);
   show("moveEntryContainer");
 }
 
@@ -778,7 +778,7 @@ function showLoginPrompt(tab, url) {
       hide("listSelectionContainer");
       hide("shareContainer");
       hide("tutorialContainer");
-      setUtilityBarHidden(false);
+      setUtilityBarHidden(true);
       document.getElementById("loginPromptText").textContent =
         messages[MESSAGE_KEYS.loginPrompt];
       document.getElementById("loginButton").textContent =
@@ -801,7 +801,7 @@ function showListEntrySuccessMessage(tab, url, list, messageKey) {
       hide("listSelectionContainer");
       hide("shareContainer");
       hide("tutorialContainer");
-      setUtilityBarHidden(false);
+      setUtilityBarHidden(true);
       const placeholder = "$1";
       const successTextContainer = document.getElementById("successText");
       const titleText = decodeURIComponent(title).replace(/_/g, " ");
@@ -840,7 +840,7 @@ function showMoveEntrySuccessMessage(url, entry, targetList) {
     hide("listSelectionContainer");
     hide("shareContainer");
     hide("tutorialContainer");
-    setUtilityBarHidden(false);
+    setUtilityBarHidden(true);
     const successTextContainer = document.getElementById("successText");
     const placeholder = "$1";
     const titleElem = document.createElement("span");
@@ -880,7 +880,7 @@ function showAddToListFailureMessage(url, res) {
     hide("listSelectionContainer");
     hide("shareContainer");
     hide("tutorialContainer");
-    setUtilityBarHidden(false);
+    setUtilityBarHidden(true);
     document.getElementById("failureBackButton").style.display = "inline-flex";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     let message;
@@ -930,7 +930,7 @@ function showUnsupportedPageMessage() {
     hide("addToListSuccessContainer");
     hide("shareContainer");
     hide("tutorialContainer");
-    setUtilityBarHidden(false);
+    setUtilityBarHidden(true);
     document.getElementById("failureBackButton").style.display = "none";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     document.getElementById("failureReason").textContent =
