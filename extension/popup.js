@@ -40,6 +40,7 @@ const SHARE_NETWORKS = [
 
 let allReadingLists = [];
 let listSelectionContext = null;
+let listOverviewReady = false;
 let currentViewedList = null;
 let currentListEntries = [];
 let moveEntryContext = null;
@@ -49,6 +50,14 @@ let isUpdateMode = false;
 let currentUpdatingList = null;
 const SUPPORTED_HOSTS = ["wikipedia.org", "wikivoyage.org"];
 const SUPPORTED_NAMESPACES = [0];
+const MAX_READING_LISTS_API_RETRIES = 5;
+let readingListEntriesQueue = Promise.resolve();
+let nextReadingListEntriesRequest = 0;
+const IS_FIREFOX = (navigator.userAgent || "").includes("Firefox/");
+
+if (IS_FIREFOX) {
+  document.documentElement.classList.add("isFirefox");
+}
 
 function objToQueryString(obj) {
   return Object.keys(obj)
@@ -72,8 +81,8 @@ function isSupportedNamespace(ns) {
 }
 
 function getCurrentBrowserStoreKey() {
+  if (IS_FIREFOX) return "firefox";
   const ua = navigator.userAgent || "";
-  if (ua.includes("Firefox/")) return "firefox";
   if (ua.includes("Edg/")) return "edge";
   return "chrome";
 }
@@ -197,7 +206,7 @@ function getBundledMessage(lang, keys) {
  * @param {Array[string]} keys message keys to request
  */
 function geti18nMessages(origin, keys) {
-  return fetch(geti18nMessageUrl(origin, keys), { credentials: "same-origin" })
+  return fetch(geti18nMessageUrl(origin, keys), { credentials: "include" })
     .then(res => {
       if (!res.ok) {
         throw res;
@@ -233,14 +242,53 @@ function getCurrentTab() {
 }
 
 function getCsrfToken(origin) {
-  return fetch(csrfFetchUrlForOrigin(origin), { credentials: "same-origin" })
+  return fetch(csrfFetchUrlForOrigin(origin), { credentials: "include" })
     .then(res => res.json())
     .then(res => res.query.tokens.csrftoken);
 }
 
+function parseReadingListsApiResponse(response, requestUrl) {
+  return response.text().then(body => {
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch (err) {
+      const contentType = response.headers.get("content-type") || "unknown content type";
+      const preview = body.trim().replace(/\s+/g, " ").slice(0, 160) || "empty response";
+      throw new Error(
+        `Reading Lists API returned ${response.status} (${contentType}) for ${requestUrl}: ${preview}`
+      );
+    }
+
+    if (response.status < 200 || response.status > 399) {
+      throw data;
+    }
+    return data;
+  });
+}
+
+function waitForReadingListsApi(delay) {
+  return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+function getRetryDelay(response, attempt) {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter && retryAfter.trim()) {
+    const retryAfterSeconds = Number(retryAfter);
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+      return Math.max(1000, retryAfterSeconds * 1000);
+    }
+    const retryAt = Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) {
+      return Math.max(1000, retryAt - Date.now());
+    }
+  }
+  return Math.min(60000 * 2 ** attempt, 300000);
+}
+
 function getReadingListsPage(url, rlcontinue) {
   return fetch(getReadingListsUrlForOrigin(url.origin, rlcontinue), {
-    credentials: "same-origin"
+    credentials: "include"
   })
     .then(res => {
       if (res.status < 200 || res.status > 399) {
@@ -544,29 +592,6 @@ function setListSelectionContextEntries(listId, hasEntry) {
 
 function setSavedRowUiState(listId, hasEntry) {
   setListSelectionContextEntries(listId, hasEntry);
-}
-
-function getEntryLang(entry) {
-  try {
-    const hostname = new URL(entry.project).hostname.replace(/^m\./, "");
-    return hostname.split(".")[0] || "en";
-  } catch (err) {
-    return "en";
-  }
-}
-
-function downloadJsonFile(filename, data) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json"
-  });
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
 }
 
 function sanitizeExportFilename(name) {
@@ -881,7 +906,7 @@ function showAddToListFailureMessage(url, res) {
     hide("shareContainer");
     hide("tutorialContainer");
     setUtilityBarHidden(true);
-    document.getElementById("failureBackButton").style.display = "inline-flex";
+    document.getElementById("failureBackButton").style.display = listOverviewReady ? "inline-flex" : "none";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     let message;
     if (res.title === "readinglists-db-error-not-set-up") {
@@ -908,6 +933,8 @@ function showAddToListFailureMessage(url, res) {
           ? res.title
           : res.type
             ? res.type
+            : res.message
+              ? res.message
             : typeof res === "object"
               ? JSON.stringify(res)
               : res;
@@ -957,7 +984,7 @@ function getCreateEntryPostOptions(listId, project, title, token) {
   return {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    credentials: "same-origin",
+    credentials: "include",
     body: getCreateEntryPostBody(listId, project, title, token)
   };
 }
@@ -1010,7 +1037,7 @@ function getDeleteEntryPostOptions(entryId, token) {
   return {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    credentials: "same-origin",
+    credentials: "include",
     body: getDeleteEntryPostBody(entryId, token)
   };
 }
@@ -1026,7 +1053,7 @@ function createReadingList(url, token, name, description) {
   return fetch(readingListCreateUrlForOrigin(url.origin), {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    credentials: "same-origin",
+    credentials: "include",
     body: getCreateListPostBody(name, description, token)
   }).then(res => res.json());
 }
@@ -1035,7 +1062,7 @@ function deleteReadingList(url, token, listId) {
   return fetch(readingListDeleteUrlForOrigin(url.origin), {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    credentials: "same-origin",
+    credentials: "include",
     body: getDeleteListPostBody(listId, token)
   }).then(res => res.json());
 }
@@ -1044,14 +1071,14 @@ function updateReadingList(url, token, listId, name, description) {
   return fetch(readingListUpdateUrlForOrigin(url.origin), {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    credentials: "same-origin",
+    credentials: "include",
     body: getUpdateListPostBody(listId, name, description, token)
   }).then(res => res.json());
 }
 
 function getArticleSummary(entry) {
   return fetch(pageSummaryUrlForEntry(entry), {
-    credentials: "same-origin"
+    credentials: "include"
   }).then(res => {
     if (!res.ok) {
       return res.json().then(data => {
@@ -1068,33 +1095,48 @@ function normalizeEntryTitle(title) {
     .trim();
 }
 
-function getReadingListEntriesPage(url, listId, rlecontinue) {
-  return fetch(readingListEntriesUrlForOrigin(url.origin, listId, rlecontinue), {
-    credentials: "same-origin"
-  }).then(res => {
-    if (res.status < 200 || res.status > 399) {
-      return res.json().then(data => {
-        throw data;
-      });
+function getReadingListEntriesPage(url, listId, rlecontinue, onRetry) {
+  const requestUrl = readingListEntriesUrlForOrigin(
+    url.origin,
+    listId,
+    rlecontinue
+  );
+  async function requestPage() {
+    for (let attempt = 0; ; attempt++) {
+      const delay = nextReadingListEntriesRequest - Date.now();
+      if (delay > 0) await waitForReadingListsApi(delay);
+      const res = await fetch(requestUrl, { credentials: "include" });
+      nextReadingListEntriesRequest = Date.now() + 1000;
+      if ((res.status === 429 || res.status === 503) && attempt < MAX_READING_LISTS_API_RETRIES) {
+        const retryDelay = getRetryDelay(res, attempt);
+        nextReadingListEntriesRequest = Date.now() + retryDelay;
+        if (onRetry) onRetry(retryDelay);
+        continue;
+      }
+      return parseReadingListsApiResponse(res, requestUrl);
     }
-    return res.json();
-  });
+  }
+
+  const request = readingListEntriesQueue.then(requestPage);
+  readingListEntriesQueue = request.catch(() => {});
+  return request;
 }
 
-function getAllReadingListEntries(url, listId, rlecontinue, entries) {
+function getAllReadingListEntries(url, listId, rlecontinue, entries, onProgress, onRetry) {
   const combined = entries || [];
-  return getReadingListEntriesPage(url, listId, rlecontinue).then(res => {
+  return getReadingListEntriesPage(url, listId, rlecontinue, onRetry).then(res => {
     const pageEntries =
       res && res.query && res.query.readinglistentries
         ? res.query.readinglistentries
         : [];
     const nextEntries = combined.concat(pageEntries);
+    if (onProgress) onProgress(nextEntries.length);
     const nextContinue =
       res && res.continue && res.continue.rlecontinue
         ? res.continue.rlecontinue
         : null;
     if (nextContinue) {
-      return getAllReadingListEntries(url, listId, nextContinue, nextEntries);
+      return getAllReadingListEntries(url, listId, nextContinue, nextEntries, onProgress, onRetry);
     }
     return nextEntries;
   });
@@ -1589,63 +1631,43 @@ function handleReadingListUpdate() {
     });
 }
 
-function exportReadingListsData(lists) {
-  if (!listSelectionContext) return Promise.resolve();
-  setListUiDisabled(true);
-  setListStatus("Exporting reading lists...");
-  return Promise.all(
-    lists.map(list =>
-      getAllReadingListEntries(listSelectionContext.url, list.id).then(entries => ({
-        name: list.name,
-        description: list.description || "",
-        pages: entries.map(entry => ({
-          title: entry.title,
-          lang: getEntryLang(entry)
-        }))
-      }))
-    )
-  )
-    .then(exportedLists => {
-      downloadJsonFile("Wikipedia reading lists (Saved and more).json", {
-        readingListsV1: exportedLists
-      });
-      setListStatus("Reading lists exported.");
-    })
-    .catch(err => showAddToListFailureMessage(listSelectionContext.url, err))
-    .finally(() => {
-      setListUiDisabled(false);
+async function refreshExportProgress() {
+  const status = document.getElementById("exportProgress");
+  try {
+    const job = await browser.runtime.sendMessage({ type: "getReadingListsExport" });
+    const showStatus = job && job.state !== "complete";
+    status.style.display = showStatus ? "block" : "none";
+    status.textContent = showStatus ? job.message : "";
+    document.getElementById("exportReadingListsButton").disabled = job?.state === "running";
+    document.getElementById("exportListEntriesButton").disabled = job?.state === "running";
+  } catch (err) {
+    status.style.display = "block";
+    status.textContent = `Unable to check export: ${err.message || err}`;
+  }
+}
+
+async function startReadingListsExport(lists, filename) {
+  if (!listSelectionContext) return;
+  try {
+    const result = await browser.runtime.sendMessage({
+      type: "startReadingListsExport", origin: listSelectionContext.url.origin, lists, filename
     });
+    if (result?.error) throw new Error(result.error);
+    await refreshExportProgress();
+  } catch (err) {
+    const status = document.getElementById("exportProgress");
+    status.style.display = "block";
+    status.textContent = `Unable to start export: ${err.message || err}`;
+  }
+}
+
+function exportReadingListsData(lists) {
+  return startReadingListsExport(lists, "Wikipedia reading lists (Saved and more).json");
 }
 
 function exportCurrentReadingList() {
   if (!currentViewedList) return;
-  setListEntriesUiDisabled(true);
-  setListEntriesStatus(`Exporting "${currentViewedList.name}"...`);
-  return getAllReadingListEntries(listSelectionContext.url, currentViewedList.id)
-    .then(entries => {
-      currentListEntries = entries;
-      renderReadingListEntries(getFilteredListEntries());
-      downloadJsonFile(
-        `${sanitizeExportFilename(currentViewedList.name)} (Wikipedia reading lists).json`,
-        {
-          readingListsV1: [
-            {
-              name: currentViewedList.name,
-              description: currentViewedList.description || "",
-              pages: entries.map(entry => ({
-                title: entry.title,
-                lang: getEntryLang(entry)
-              }))
-            }
-          ]
-        }
-      );
-      setListEntriesStatus(`Exported "${currentViewedList.name}".`);
-    })
-    .catch(err => showAddToListFailureMessage(listSelectionContext.url, err))
-    .finally(() => {
-      setListEntriesUiDisabled(false);
-    });
+  return startReadingListsExport([currentViewedList], `${sanitizeExportFilename(currentViewedList.name)} (Wikipedia reading lists).json`);
 }
 
 function handleRemovePageFromListResult(tab, url, res, list) {
@@ -1746,7 +1768,7 @@ function getListsContainingEntry(url, title) {
       title,
       getProjectOrigin(url)
     ),
-    { credentials: "same-origin" }
+    { credentials: "include" }
   )
     .then(res => {
       if (!res.ok) return new Set();
@@ -1777,6 +1799,7 @@ function handleTokenResult(tab, url, token) {
   }
 
   listSelectionContext = { tab, url, token };
+  listOverviewReady = false;
   setDeleteMode(false);
   setUpdateMode(false);
   showListSelection();
@@ -1789,6 +1812,7 @@ function handleTokenResult(tab, url, token) {
   return getAllReadingLists(url)
     .then(lists => {
       allReadingLists = sortReadingLists(lists);
+      listOverviewReady = true;
       setListLoading(false);
       renderReadingLists();
       setListUiDisabled(false);
@@ -1812,9 +1836,24 @@ function handleTokenResult(tab, url, token) {
 }
 
 function handleClick(tab, url) {
-  return getCsrfToken(url.origin).then(token =>
-    handleTokenResult(tab, url, token)
-  );
+  return getCsrfToken(url.origin)
+    .catch(async err => {
+      console.error("Unable to request the Wikimedia CSRF token:", err);
+      if (err instanceof TypeError) {
+        let hasPermission;
+        try {
+          hasPermission = await browser.permissions.contains({ origins: [`${url.origin}/*`] });
+        } catch (permissionError) {
+          console.error("Unable to check Wikimedia site permission:", permissionError);
+        }
+        if (hasPermission === false) {
+          throw new Error(`The browser has not granted this extension access to ${url.hostname}. Enable site access in the extension's permissions and reopen the popup.`);
+        }
+        throw new Error("Unable to connect to Wikimedia. Check your internet connection and the extension's site permissions, then reopen the popup.");
+      }
+      throw err;
+    })
+    .then(token => handleTokenResult(tab, url, token));
 }
 
 function isSupportedPage(tab) {
@@ -1830,7 +1869,9 @@ function isSupportedPage(tab) {
   return browser.tabs
     .sendMessage(tab.id, { type: "wikiExtensionGetPageNamespace" })
     .then(res => Boolean(res) && isSupportedNamespace(res.ns))
-    .catch(() => false);
+    .catch(() => {
+      throw new Error("Unable to access this page. Refresh the page and try again, and check the extension's site permissions.");
+    });
 }
 
 document
@@ -1904,6 +1945,9 @@ document
   .getElementById("tutorialBackButton")
   .addEventListener("click", showListSelection);
 
+refreshExportProgress();
+setInterval(refreshExportProgress, 2000);
+
 getCurrentTab().then(tab => {
   const url = new URL(tab.url);
   return isSupportedPage(tab).then(isSupported => {
@@ -1913,5 +1957,5 @@ getCurrentTab().then(tab => {
     return handleClick(tab, url).catch(err =>
       showAddToListFailureMessage(url, err)
     );
-  });
+  }).catch(err => showAddToListFailureMessage(url, err));
 });

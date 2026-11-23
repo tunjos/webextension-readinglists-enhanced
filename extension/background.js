@@ -1,4 +1,6 @@
-importScripts("dist/browser-polyfill.min.js");
+if (typeof importScripts === "function") {
+  importScripts("dist/browser-polyfill.min.js");
+}
 
 const supportedHosts = ["wikipedia.org", "wikivoyage.org"];
 
@@ -36,20 +38,21 @@ function shouldShowPageAction(url, ns) {
 }
 
 function initializePageAction(tab) {
-  if (!tab || !tab.url) return;
+  const pageAction = browser.pageAction;
+  if (!pageAction || !tab || !tab.url) return;
+
   const url = new URL(tab.url);
-  const action = browser.action || browser.pageAction;
   browser.tabs
     .sendMessage(tab.id, { type: "wikiExtensionGetPageNamespace" })
     .then(res => {
-      if (shouldShowPageAction(url, res.ns)) {
-        action.show(tab.id);
+      if (res && shouldShowPageAction(url, res.ns)) {
+        pageAction.show(tab.id);
       } else {
-        action.hide(tab.id);
+        pageAction.hide(tab.id);
       }
     })
     .catch(() => {
-      action.hide(tab.id);
+      pageAction.hide(tab.id);
     });
 }
 
@@ -71,3 +74,134 @@ browser.tabs.onUpdated.addListener((id, changeInfo, tab) => {
 browser.tabs.onActivated.addListener(activeInfo => {
   browser.tabs.get(activeInfo.tabId).then(tab => initializePageAction(tab));
 });
+
+const EXPORT_KEY = "readingListsExport";
+const EXPORT_ALARM = "readingListsExportResume";
+let exportRunning = false;
+let exportStarting = false;
+
+function exportDelay(response, attempt) {
+  const header = response.headers.get("retry-after");
+  if (header && header.trim()) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.max(1000, seconds * 1000);
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.max(1000, date - Date.now());
+  }
+  return Math.min(60000 * 2 ** attempt, 300000);
+}
+
+async function saveExport(job) {
+  await browser.storage.local.set({ [EXPORT_KEY]: job });
+}
+
+async function runExport() {
+  if (exportRunning) return;
+  exportRunning = true;
+  let job;
+  try {
+    job = (await browser.storage.local.get(EXPORT_KEY))[EXPORT_KEY];
+    if (!job || job.state !== "running") return;
+    while (job.index < job.lists.length) {
+      const wait = (job.nextRequest || 0) - Date.now();
+      if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+      const list = job.lists[job.index];
+      const params = new URLSearchParams({ action: "query", list: "readinglistentries", rlelists: String(list.id), rlelimit: "max", format: "json" });
+      if (job.continuation) params.set("rlecontinue", job.continuation);
+      const response = await fetch(`${job.origin}/w/api.php?${params}`, { credentials: "include" });
+      if ((response.status === 429 || response.status === 503) && job.attempt < 5) {
+        const delay = exportDelay(response, job.attempt++);
+        job.nextRequest = Date.now() + delay;
+        job.message = `Wikimedia rate limit reached; retrying in ${Math.ceil(delay / 1000)} seconds. ${job.index} of ${job.lists.length} lists completed.`;
+        await saveExport(job);
+        continue;
+      }
+      const body = await response.text();
+      let data;
+      try { data = JSON.parse(body); } catch (err) {
+        throw new Error(`Reading Lists API returned ${response.status}: ${body.trim().slice(0, 160)}`);
+      }
+      if (!response.ok || data.error) throw new Error(data.error?.info || `Reading Lists API returned ${response.status}`);
+      const entries = data.query?.readinglistentries || [];
+      for (const entry of entries) {
+        let lang = "en";
+        try { lang = new URL(entry.project).hostname.replace(/^m\./, "").split(".")[0] || "en"; } catch (err) {}
+        job.output[job.index].pages.push({ title: entry.title, lang });
+      }
+      job.continuation = data.continue?.rlecontinue || null;
+      job.attempt = 0;
+      job.nextRequest = Date.now() + 1000;
+      if (job.continuation) {
+        job.message = `Exporting: ${job.index} of ${job.lists.length} lists completed; ${job.output[job.index].pages.length} articles fetched from "${list.name}".`;
+      } else {
+        job.index++;
+        job.message = `Exporting: ${job.index} of ${job.lists.length} lists completed.`;
+      }
+      await saveExport(job);
+    }
+    job.message = "Preparing download...";
+    await saveExport(job);
+    await browser.downloads.download({
+      url: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({ readingListsV1: job.output }, null, 2))}`,
+      filename: job.filename,
+      conflictAction: "uniquify",
+      saveAs: false
+    });
+    job.state = "complete";
+    job.message = "Reading lists exported.";
+    delete job.output;
+    await saveExport(job);
+    await browser.alarms.clear(EXPORT_ALARM);
+  } catch (err) {
+    if (job) {
+      job.state = "error";
+      job.message = `Export failed: ${err.message || String(err)}`;
+      delete job.output;
+      await saveExport(job);
+      await browser.alarms.clear(EXPORT_ALARM);
+    }
+  } finally {
+    exportRunning = false;
+  }
+}
+
+async function startExport(message) {
+  if (exportStarting || exportRunning) return { error: "An export is already in progress." };
+  exportStarting = true;
+  try {
+    const existing = (await browser.storage.local.get(EXPORT_KEY))[EXPORT_KEY];
+    if (existing?.state === "running") return { error: "An export is already in progress." };
+    const origin = new URL(message.origin);
+    if (origin.protocol !== "https:" || !supportedHosts.some(host => origin.hostname === host || origin.hostname.endsWith(`.${host}`))) {
+      return { error: "Unsupported export origin." };
+    }
+    const lists = message.lists.map(list => ({ id: list.id, name: list.name, description: list.description || "" }));
+    const job = {
+      state: "running", origin: origin.origin, lists, index: 0, continuation: null,
+      output: lists.map(list => ({ name: list.name, description: list.description, pages: [] })),
+      filename: message.filename, attempt: 0, nextRequest: 0,
+      message: `Exporting: 0 of ${lists.length} lists completed.`
+    };
+    await saveExport(job);
+    await browser.alarms.create(EXPORT_ALARM, { delayInMinutes: 0.5, periodInMinutes: 0.5 });
+    runExport();
+    return { started: true };
+  } finally {
+    exportStarting = false;
+  }
+}
+
+browser.runtime.onMessage.addListener(message => {
+  if (message.type === "startReadingListsExport") return startExport(message);
+  if (message.type === "getReadingListsExport") {
+    return browser.storage.local.get(EXPORT_KEY).then(result => {
+      const job = result[EXPORT_KEY];
+      if (job?.state === "running") runExport();
+      return job ? { state: job.state, message: job.message } : null;
+    });
+  }
+});
+browser.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === EXPORT_ALARM) runExport();
+});
+browser.runtime.onStartup.addListener(() => runExport());
