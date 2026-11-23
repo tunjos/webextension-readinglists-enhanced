@@ -12,6 +12,9 @@ fi
 
 name="$(sed -n 's/^[[:space:]]*"name":[[:space:]]*"\([^"]*\)".*/\1/p' "${manifest_path}" | head -n 1)"
 version="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "${manifest_path}" | head -n 1)"
+if [[ "${name}" == "__MSG_extensionName__" ]]; then
+  name="$(perl -MJSON::PP -0777 -ne 'print decode_json($_)->{extensionName}->{message}' "${script_dir}/extension/_locales/en/messages.json")"
+fi
 
 if [[ -z "${name}" || -z "${version}" ]]; then
   echo "Failed to read name or version from ${manifest_path}" >&2

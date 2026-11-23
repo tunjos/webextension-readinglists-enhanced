@@ -8,16 +8,17 @@ Compatible with both Firefox and Chromium/Google Chrome courtesy of [webextensio
 
 See debug installation instructions for [Firefox](https://developer.mozilla.org/en-US/docs/Tools/about%3Adebugging) and [Chrome](https://developer.chrome.com/extensions/getstarted).
 
-## i18n message fetching
+## Internationalization
 
-This extension bundles message translations provided by the volunteer translators at [TranslateWiki.net](https://translatewiki.net) as part of MediaWiki's [ReadingLists extension](https://www.mediawiki.org/wiki/Extension:ReadingLists). These can be updated from the MediaWiki API at www.mediawiki.org using the `getMessages.js` script.
+The extension uses the browser's UI language and WebExtension message catalogs
+in `extension/_locales`. English is the default and fallback locale. Add new
+languages as `_locales/<locale>/messages.json`, preserving message keys and
+substitution placeholders. UI message translations are bundled with the
+extension; article content and summaries remain in the source wiki's language.
+Plural messages use `Intl.PluralRules` category suffixes (for example `_one`
+and `_other`); translations may add the categories used by their locale.
 
-```
-npm install
-node getMessages.js
-```
-
-Note: Running the tests and i18n message fetching scripts requires Node.js 7.6.0 or newer.
+Run `npm test` to validate the message catalogs and their references.
 
 ## issues
 

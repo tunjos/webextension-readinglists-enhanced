@@ -80,6 +80,12 @@ const EXPORT_ALARM = "readingListsExportResume";
 let exportRunning = false;
 let exportStarting = false;
 
+function setExportMessage(job, key, args = []) {
+  job.messageKey = key;
+  job.messageArgs = args.map(String);
+  delete job.message;
+}
+
 function exportDelay(response, attempt) {
   const header = response.headers.get("retry-after");
   if (header && header.trim()) {
@@ -112,16 +118,16 @@ async function runExport() {
       if ((response.status === 429 || response.status === 503) && job.attempt < 5) {
         const delay = exportDelay(response, job.attempt++);
         job.nextRequest = Date.now() + delay;
-        job.message = `Wikimedia rate limit reached; retrying in ${Math.ceil(delay / 1000)} seconds. ${job.index} of ${job.lists.length} lists completed.`;
+        setExportMessage(job, "exportRetry", [Math.ceil(delay / 1000), job.index, job.lists.length]);
         await saveExport(job);
         continue;
       }
       const body = await response.text();
       let data;
       try { data = JSON.parse(body); } catch (err) {
-        throw new Error(`Reading Lists API returned ${response.status}: ${body.trim().slice(0, 160)}`);
+        throw new Error(browser.i18n.getMessage("apiErrorDetail", [String(response.status), body.trim().slice(0, 160)]));
       }
-      if (!response.ok || data.error) throw new Error(data.error?.info || `Reading Lists API returned ${response.status}`);
+      if (!response.ok || data.error) throw new Error(data.error?.info || browser.i18n.getMessage("apiErrorStatus", String(response.status)));
       const entries = data.query?.readinglistentries || [];
       for (const entry of entries) {
         let lang = "en";
@@ -132,14 +138,14 @@ async function runExport() {
       job.attempt = 0;
       job.nextRequest = Date.now() + 1000;
       if (job.continuation) {
-        job.message = `Exporting: ${job.index} of ${job.lists.length} lists completed; ${job.output[job.index].pages.length} articles fetched from "${list.name}".`;
+        setExportMessage(job, "exportListProgress", [job.index, job.lists.length, job.output[job.index].pages.length, list.name]);
       } else {
         job.index++;
-        job.message = `Exporting: ${job.index} of ${job.lists.length} lists completed.`;
+        setExportMessage(job, "exportProgress", [job.index, job.lists.length]);
       }
       await saveExport(job);
     }
-    job.message = "Preparing download...";
+    setExportMessage(job, "exportPreparing");
     await saveExport(job);
     await browser.downloads.download({
       url: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({ readingListsV1: job.output }, null, 2))}`,
@@ -148,14 +154,14 @@ async function runExport() {
       saveAs: false
     });
     job.state = "complete";
-    job.message = "Reading lists exported.";
+    setExportMessage(job, "exportComplete");
     delete job.output;
     await saveExport(job);
     await browser.alarms.clear(EXPORT_ALARM);
   } catch (err) {
     if (job) {
       job.state = "error";
-      job.message = `Export failed: ${err.message || String(err)}`;
+      setExportMessage(job, "exportFailed", [err.message || String(err)]);
       delete job.output;
       await saveExport(job);
       await browser.alarms.clear(EXPORT_ALARM);
@@ -166,21 +172,21 @@ async function runExport() {
 }
 
 async function startExport(message) {
-  if (exportStarting || exportRunning) return { error: "An export is already in progress." };
+  if (exportStarting || exportRunning) return { error: browser.i18n.getMessage("exportInProgress") };
   exportStarting = true;
   try {
     const existing = (await browser.storage.local.get(EXPORT_KEY))[EXPORT_KEY];
-    if (existing?.state === "running") return { error: "An export is already in progress." };
+    if (existing?.state === "running") return { error: browser.i18n.getMessage("exportInProgress") };
     const origin = new URL(message.origin);
     if (origin.protocol !== "https:" || !supportedHosts.some(host => origin.hostname === host || origin.hostname.endsWith(`.${host}`))) {
-      return { error: "Unsupported export origin." };
+      return { error: browser.i18n.getMessage("exportUnsupportedOrigin") };
     }
     const lists = message.lists.map(list => ({ id: list.id, name: list.name, description: list.description || "" }));
     const job = {
       state: "running", origin: origin.origin, lists, index: 0, continuation: null,
       output: lists.map(list => ({ name: list.name, description: list.description, pages: [] })),
       filename: message.filename, attempt: 0, nextRequest: 0,
-      message: `Exporting: 0 of ${lists.length} lists completed.`
+      messageKey: "exportProgress", messageArgs: ["0", String(lists.length)]
     };
     await saveExport(job);
     await browser.alarms.create(EXPORT_ALARM, { delayInMinutes: 0.5, periodInMinutes: 0.5 });
@@ -197,7 +203,7 @@ browser.runtime.onMessage.addListener(message => {
     return browser.storage.local.get(EXPORT_KEY).then(result => {
       const job = result[EXPORT_KEY];
       if (job?.state === "running") runExport();
-      return job ? { state: job.state, message: job.message } : null;
+      return job ? { state: job.state, message: job.message, messageKey: job.messageKey, messageArgs: job.messageArgs } : null;
     });
   }
 });

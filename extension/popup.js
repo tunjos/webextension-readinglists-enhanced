@@ -1,23 +1,15 @@
 const MESSAGE_KEYS = {
-  enableSync: "readinglists-browser-enable-sync-prompt",
-  listLimitExceeded: "readinglists-browser-list-limit-exceeded",
-  entryLimitExceeded: "readinglists-browser-list-entry-limit-exceeded",
-  errorIntro: "readinglists-browser-error-intro",
-  infoLinkText: "readinglists-browser-extension-info-link-text",
-  loginButtonText: "login",
-  loginPrompt: "readinglists-browser-login-prompt",
-  addSuccess: "readinglists-browser-add-entry-success",
-  moveSuccess: "readinglists-browser-move-entry-success",
-  removeSuccess: "readinglists-browser-remove-entry-success",
-  unsupportedPage: "readinglists-browser-unsupported-page"
-};
-
-const ALLMESSAGES_QUERY = {
-  action: "query",
-  format: "json",
-  formatversion: "2",
-  meta: "allmessages",
-  amenableparser: ""
+  enableSync: "enableSync",
+  listLimitExceeded: "listLimitExceeded",
+  entryLimitExceeded: "entryLimitExceeded",
+  errorIntro: "errorIntro",
+  infoLinkText: "infoLinkText",
+  loginButtonText: "loginButtonText",
+  loginPrompt: "loginPrompt",
+  addSuccess: "addSuccess",
+  moveSuccess: "moveSuccess",
+  removeSuccess: "removeSuccess",
+  unsupportedPage: "unsupportedPage"
 };
 
 const STORE_URLS = {
@@ -57,6 +49,73 @@ const IS_FIREFOX = (navigator.userAgent || "").includes("Firefox/");
 
 if (IS_FIREFOX) {
   document.documentElement.classList.add("isFirefox");
+}
+
+function localizePopup() {
+  const text = {
+    listIntro: "chooseList", listLoading: "loadingLists", listEmpty: "noLists",
+    createListSubmitButton: "createList", updateListSubmitButton: "updateList",
+    listEntriesLoading: "loadingArticles", listEntriesEmpty: "noArticles",
+    articleSummaryLoading: "loadingSummary", moveEntryEmpty: "noLists",
+    shareIntroText: "shareIntro", shareUtilityButton: "share",
+    rateUtilityButton: "rate", tutorialUtilityButton: "tutorial"
+  };
+  for (const [id, key] of Object.entries(text)) {
+    document.getElementById(id).textContent = browser.i18n.getMessage(key);
+  }
+  const placeholders = {
+    listSearchInput: "searchLists", moveEntrySearchInput: "searchLists",
+    listEntriesSearchInput: "searchArticles", createListNameInput: "listName",
+    updateListNameInput: "listName", createListDescriptionInput: "listDescription",
+    updateListDescriptionInput: "listDescription"
+  };
+  for (const [id, key] of Object.entries(placeholders)) {
+    document.getElementById(id).placeholder = browser.i18n.getMessage(key);
+  }
+  const labels = {
+    exportReadingListsButton: "exportLists", createReadingListButton: "createListAction",
+    updateReadingListButton: "updateListAction", deleteReadingListButton: "deleteListAction",
+    exportListEntriesButton: "exportList"
+  };
+  for (const [id, key] of Object.entries(labels)) {
+    const button = document.getElementById(id);
+    button.title = browser.i18n.getMessage(key);
+    button.setAttribute("aria-label", button.title);
+  }
+  document.querySelectorAll(".subviewBackButton").forEach(button => {
+    button.textContent = browser.i18n.getMessage("back");
+  });
+  const headings = {
+    createListContainer: "createListHeading", updateListContainer: "updateListAction",
+    shareContainer: "shareExtension", tutorialContainer: "tutorial"
+  };
+  for (const [id, key] of Object.entries(headings)) {
+    document.querySelector(`#${id} .subviewHeader p`).textContent = browser.i18n.getMessage(key);
+  }
+  const tutorials = [
+    ["viewList", "tutorialViewList"], ["createList", "tutorialCreateList"],
+    ["updateList", "tutorialUpdateList"], ["deleteList", "tutorialDeleteList"],
+    ["export", "tutorialExport"], ["saveRemoveArticle", "tutorialSaveRemove"],
+    ["moveArticle", "tutorialMoveArticle"]
+  ];
+  document.querySelectorAll(".tutorialItem > div").forEach((item, index) => {
+    const [heading, description] = tutorials[index];
+    item.querySelector("strong").textContent = browser.i18n.getMessage(heading);
+    item.lastChild.textContent = browser.i18n.getMessage(description);
+  });
+  document.documentElement.lang = browser.i18n.getUILanguage();
+  document.documentElement.dir = browser.i18n.getMessage("@@bidi_dir");
+}
+
+localizePopup();
+
+function msg(key, substitutions) {
+  return browser.i18n.getMessage(key, substitutions);
+}
+
+function pluralMsg(key, count) {
+  const category = new Intl.PluralRules(browser.i18n.getUILanguage()).select(Number(count));
+  return msg(`${key}_${category}`, String(count)) || msg(`${key}_other`, String(count));
 }
 
 function objToQueryString(obj) {
@@ -177,62 +236,13 @@ function csrfFetchUrlForOrigin(origin) {
   return `${origin}/w/api.php?action=query&format=json&formatversion=2&meta=tokens&type=csrf`;
 }
 
-function geti18nMessageUrl(origin, keys) {
-  return `${origin}/w/api.php?${objToQueryString(
-    Object.assign(ALLMESSAGES_QUERY, { ammessages: keys.join("|") })
-  )}`;
-}
-
-function fetchBundledMessagesForLang(lang) {
-  return fetch(browser.runtime.getURL(`i18n/${lang}.json`));
-}
-
 function getBundledMessage(lang, keys) {
-  return fetchBundledMessagesForLang(lang)
-    .then(res => res.json())
-    .then(res => {
-      const result = {};
-      keys.forEach(key => {
-        result[key] = res[key];
-      });
-      return result;
-    });
+  return Promise.resolve(Object.fromEntries(keys.map(key => [key, msg(key, ["$1", "$2", "$3"])])));
 }
 
-/**
- * Get UI messages from the MediaWiki API (in the user's preferred UI lang), falling back to bundled
- * English strings if this fails.
- * @param {string} origin the origin of the site URL
- * @param {Array[string]} keys message keys to request
- */
+// Keep the existing promise-based callers while using the browser's locale.
 function geti18nMessages(origin, keys) {
-  return fetch(geti18nMessageUrl(origin, keys), { credentials: "include" })
-    .then(res => {
-      if (!res.ok) {
-        throw res;
-      } else {
-        return res.json();
-      }
-    })
-    .then(res => {
-      const result = {};
-      if (res.query && res.query.allmessages && res.query.allmessages.length) {
-        res.query.allmessages.forEach(messageObj => {
-          if (
-            messageObj &&
-            messageObj.name &&
-            messageObj.content &&
-            !/^⧼.+⧽$/.test(messageObj.content)
-          ) {
-            result[messageObj.name] = messageObj.content;
-          }
-        });
-      }
-      return getBundledMessage("en", keys).then(bundled =>
-        Object.assign({}, bundled, result)
-      );
-    })
-    .catch(() => getBundledMessage("en", keys));
+  return getBundledMessage("en", keys);
 }
 
 function getCurrentTab() {
@@ -422,17 +432,17 @@ function setArticleSummaryStatus(text) {
 function renderShareTargets() {
   const shareGrid = document.getElementById("shareGrid");
   const shareUrl = getCurrentStoreUrl();
-  const shareText = "Check out Wikipedia Reading Lists Enhanced";
+  const shareText = msg("shareText");
   document.getElementById(
     "shareIntroText"
-  ).textContent = `Share the current ${getCurrentStoreLabel()} listing:`;
+  ).textContent = msg("shareStore", getCurrentStoreLabel());
   shareGrid.textContent = "";
   SHARE_NETWORKS.forEach(network => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "shareNetworkButton";
-    button.title = `Share on ${network.label}`;
-    button.setAttribute("aria-label", `Share on ${network.label}`);
+    button.title = msg("shareOn", network.label);
+    button.setAttribute("aria-label", button.title);
     button.addEventListener("click", () =>
       browser.tabs.create({
         url: getShareUrl(network.key, shareUrl, shareText)
@@ -483,8 +493,8 @@ function renderReadingLists() {
     const viewButton = document.createElement("button");
     viewButton.type = "button";
     viewButton.className = "listViewIconButton";
-    viewButton.title = `View articles in "${list.name}"`;
-    viewButton.setAttribute("aria-label", `View articles in ${list.name}`);
+    viewButton.title = msg("viewArticles", list.name);
+    viewButton.setAttribute("aria-label", viewButton.title);
     const viewIconGlyph = document.createElement("span");
     viewIconGlyph.className = "listViewIcon";
     viewButton.appendChild(viewIconGlyph);
@@ -517,7 +527,7 @@ function renderReadingLists() {
     if (list.default) {
       const defaultTag = document.createElement("span");
       defaultTag.className = "listDefaultTag";
-      defaultTag.textContent = "Default";
+      defaultTag.textContent = msg("defaultList");
       badges.appendChild(defaultTag);
     }
 
@@ -536,8 +546,8 @@ function renderReadingLists() {
       const savedIcon = document.createElement("button");
       savedIcon.type = "button";
       savedIcon.className = "listSavedIconButton";
-      savedIcon.title = "Remove from this list";
-      savedIcon.setAttribute("aria-label", "Remove from this list");
+      savedIcon.title = msg("removeFromList");
+      savedIcon.setAttribute("aria-label", savedIcon.title);
       const savedIconGlyph = document.createElement("span");
       savedIconGlyph.className = "listSavedIcon";
       savedIcon.appendChild(savedIconGlyph);
@@ -606,7 +616,7 @@ function setDeleteMode(enabled) {
   document
     .getElementById("deleteReadingListButton")
     .classList.toggle("active", enabled);
-  setListStatus(enabled ? "Select a reading list to delete." : "");
+  setListStatus(enabled ? msg("selectDelete") : "");
   renderReadingLists();
 }
 
@@ -618,7 +628,7 @@ function setUpdateMode(enabled) {
   document
     .getElementById("updateReadingListButton")
     .classList.toggle("active", enabled);
-  setListStatus(enabled ? "Select a reading list to update." : "");
+  setListStatus(enabled ? msg("selectUpdate") : "");
   renderReadingLists();
 }
 
@@ -833,7 +843,7 @@ function showListEntrySuccessMessage(tab, url, list, messageKey) {
       const titleElem = document.createElement("span");
       titleElem.className = "successTitle";
       titleElem.textContent = titleText;
-      const listName = list && list.name ? `${list.name} list` : "reading list";
+      const listName = list && list.name ? list.name : "reading";
       let message = messages[messageKey];
       message = message.replace(/<[^>]+>/g, "");
       message = message
@@ -872,7 +882,7 @@ function showMoveEntrySuccessMessage(url, entry, targetList) {
     titleElem.className = "successTitle";
     titleElem.textContent = normalizeArticleTitle(entry.title);
     const targetListName =
-      targetList && targetList.name ? `${targetList.name} list` : "reading list";
+      targetList && targetList.name ? targetList.name : "reading";
     let message = messages[MESSAGE_KEYS.moveSuccess] || "$1 moved to $2";
     message = message.replace(/<[^>]+>/g, "").replace("$2", targetListName);
     if (message.includes(placeholder)) {
@@ -924,8 +934,8 @@ function showAddToListFailureMessage(url, res) {
     } else if (res.title === "readinglists-db-error-entry-limit") {
       const maxEntries = getEntryLimitFromError(res);
       message = maxEntries
-        ? messages[MESSAGE_KEYS.entryLimitExceeded].replace("$1", maxEntries)
-        : "Article cannot be saved. You have reached the limit of articles per list.";
+        ? pluralMsg("entryLimitExceeded", maxEntries)
+        : msg("entryLimitUnknown");
     } else {
       const detail = res.detail
         ? res.detail
@@ -1247,8 +1257,8 @@ function renderReadingListEntries(entries) {
     const viewButton = document.createElement("button");
     viewButton.type = "button";
     viewButton.className = "listViewIconButton";
-    viewButton.title = "View summary";
-    viewButton.setAttribute("aria-label", `View summary for ${normalizeArticleTitle(entry.title)}`);
+    viewButton.title = msg("viewSummary");
+    viewButton.setAttribute("aria-label", msg("viewSummaryFor", normalizeArticleTitle(entry.title)));
     const viewIcon = document.createElement("span");
     viewIcon.className = "listViewIcon";
     viewButton.appendChild(viewIcon);
@@ -1269,8 +1279,8 @@ function renderReadingListEntries(entries) {
     const moveButton = document.createElement("button");
     moveButton.type = "button";
     moveButton.className = "articleActionButton";
-    moveButton.title = "Move to another list";
-    moveButton.setAttribute("aria-label", "Move to another list");
+    moveButton.title = msg("moveToList");
+    moveButton.setAttribute("aria-label", moveButton.title);
     const moveIcon = document.createElement("span");
     moveIcon.className = "moveArticleIcon";
     moveButton.appendChild(moveIcon);
@@ -1283,8 +1293,8 @@ function renderReadingListEntries(entries) {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "articleActionButton";
-    removeButton.title = "Remove from this list";
-    removeButton.setAttribute("aria-label", "Remove from this list");
+    removeButton.title = msg("removeFromList");
+    removeButton.setAttribute("aria-label", removeButton.title);
     const removeIcon = document.createElement("span");
     removeIcon.className = "listSavedIcon";
     removeButton.appendChild(removeIcon);
@@ -1321,7 +1331,7 @@ function handleListViewSelection(list) {
     .catch(err => {
       currentListEntries = [];
       setListEntriesStatus(
-        err && err.detail ? err.detail : "Unable to load articles for this list."
+        err && err.detail ? err.detail : msg("unableLoadArticles")
       );
     })
     .finally(() => {
@@ -1332,9 +1342,7 @@ function handleListViewSelection(list) {
 function handleMoveEntrySelection(entry) {
   if (!currentViewedList) return;
   moveEntryContext = { entry, sourceList: currentViewedList };
-  document.getElementById("moveEntryTitle").textContent = `Move: ${normalizeArticleTitle(
-    entry.title
-  )}`;
+  document.getElementById("moveEntryTitle").textContent = msg("moveTitle", normalizeArticleTitle(entry.title));
   document.getElementById("moveEntrySearchInput").value = "";
   setMoveEntryStatus("");
   hide("moveEntryEmpty");
@@ -1358,7 +1366,7 @@ function renderArticleSummary(summary, fallbackEntry) {
   } else {
     const empty = document.createElement("p");
     empty.className = "articleSummaryText";
-    empty.textContent = "No summary is available for this article.";
+    empty.textContent = msg("noSummary");
     body.appendChild(empty);
   }
 }
@@ -1380,7 +1388,7 @@ function handleArticleSummarySelection(entry) {
       const message =
         err && err.detail
           ? err.detail
-          : "Unable to load a summary for this article.";
+          : msg("unableLoadSummary");
       setArticleSummaryStatus(message);
       renderArticleSummary(null, entry);
     })
@@ -1400,7 +1408,7 @@ function findMatchingEntryId(url, listId, title) {
       );
     });
     if (!matchingEntry || typeof matchingEntry.id === "undefined") {
-      throw new Error("Page is not saved in this reading list.");
+      throw new Error(msg("pageNotSaved"));
     }
     return matchingEntry.id;
   });
@@ -1435,7 +1443,7 @@ function removeEntryFromList(url, token, entry, list) {
 function handleViewedListEntryRemoval(entry) {
   if (!listSelectionContext || !currentViewedList) return;
   setListEntriesUiDisabled(true);
-  setListEntriesStatus(`Removing "${normalizeArticleTitle(entry.title)}"...`);
+  setListEntriesStatus(msg("removingArticle", `"${normalizeArticleTitle(entry.title)}"`));
   return removeEntryFromList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1443,7 +1451,7 @@ function handleViewedListEntryRemoval(entry) {
     currentViewedList
   )
     .then(() => {
-      setListEntriesStatus(`Removed "${normalizeArticleTitle(entry.title)}".`);
+      setListEntriesStatus(msg("removedArticle", `"${normalizeArticleTitle(entry.title)}"`));
     })
     .catch(err => {
       setListEntriesStatus("");
@@ -1458,7 +1466,7 @@ function handleMoveEntryToList(targetList) {
   if (!listSelectionContext || !moveEntryContext) return;
   const { entry, sourceList } = moveEntryContext;
   setListEntriesUiDisabled(true);
-  setMoveEntryStatus(`Moving to "${targetList.name}"...`);
+  setMoveEntryStatus(msg("movingTo", `"${targetList.name}"`));
   return addEntryToList(
     listSelectionContext.url,
     targetList.id,
@@ -1521,12 +1529,12 @@ function handleCreateReadingList() {
   const name = nameInput.value.trim();
   const description = descriptionInput.value.trim();
   if (!name) {
-    setCreateListStatus("A name is required.");
+    setCreateListStatus(msg("nameRequired"));
     return;
   }
 
   document.getElementById("createListSubmitButton").disabled = true;
-  setCreateListStatus(`Creating "${name}"...`);
+  setCreateListStatus(msg("creatingList", `"${name}"`));
   return createReadingList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1540,7 +1548,7 @@ function handleCreateReadingList() {
       nameInput.value = "";
       descriptionInput.value = "";
       showListSelection();
-      return reloadReadingLists(`Created "${name}".`);
+      return reloadReadingLists(msg("createdList", `"${name}"`));
     })
     .catch(err => {
       setCreateListStatus("");
@@ -1553,13 +1561,13 @@ function handleCreateReadingList() {
 
 function handleReadingListDeletion(list) {
   if (!listSelectionContext) return;
-  const confirmed = window.confirm(`Delete "${list.name}"?`);
+  const confirmed = window.confirm(msg("confirmDelete", `"${list.name}"`));
   if (!confirmed) {
     return;
   }
 
   setListUiDisabled(true);
-  setListStatus(`Deleting "${list.name}"...`);
+  setListStatus(msg("deletingList", `"${list.name}"`));
   return deleteReadingList(listSelectionContext.url, listSelectionContext.token, list.id)
     .then(res => {
       if (res && res.error) {
@@ -1573,7 +1581,7 @@ function handleReadingListDeletion(list) {
         currentSummaryEntry = null;
       }
       setDeleteMode(false);
-      return reloadReadingLists(`Deleted "${list.name}".`);
+      return reloadReadingLists(msg("deletedList", `"${list.name}"`));
     })
     .catch(err => {
       setDeleteMode(false);
@@ -1600,12 +1608,12 @@ function handleReadingListUpdate() {
     .getElementById("updateListDescriptionInput")
     .value.trim();
   if (!name) {
-    setUpdateListStatus("A name is required.");
+    setUpdateListStatus(msg("nameRequired"));
     return;
   }
 
   document.getElementById("updateListSubmitButton").disabled = true;
-  setUpdateListStatus(`Updating "${currentUpdatingList.name}"...`);
+  setUpdateListStatus(msg("updatingList", `"${currentUpdatingList.name}"`));
   return updateReadingList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1620,7 +1628,7 @@ function handleReadingListUpdate() {
       const previousName = currentUpdatingList.name;
       currentUpdatingList = null;
       showListSelection();
-      return reloadReadingLists(`Updated "${previousName}".`);
+      return reloadReadingLists(msg("updatedList", `"${previousName}"`));
     })
     .catch(err => {
       setUpdateListStatus("");
@@ -1637,12 +1645,12 @@ async function refreshExportProgress() {
     const job = await browser.runtime.sendMessage({ type: "getReadingListsExport" });
     const showStatus = job && job.state !== "complete";
     status.style.display = showStatus ? "block" : "none";
-    status.textContent = showStatus ? job.message : "";
+    status.textContent = showStatus ? (job.messageKey ? msg(job.messageKey, job.messageArgs) : job.message || "") : "";
     document.getElementById("exportReadingListsButton").disabled = job?.state === "running";
     document.getElementById("exportListEntriesButton").disabled = job?.state === "running";
   } catch (err) {
     status.style.display = "block";
-    status.textContent = `Unable to check export: ${err.message || err}`;
+    status.textContent = msg("checkExportFailed", String(err.message || err));
   }
 }
 
@@ -1657,7 +1665,7 @@ async function startReadingListsExport(lists, filename) {
   } catch (err) {
     const status = document.getElementById("exportProgress");
     status.style.display = "block";
-    status.textContent = `Unable to start export: ${err.message || err}`;
+    status.textContent = msg("startExportFailed", String(err.message || err));
   }
 }
 
@@ -1724,7 +1732,7 @@ function addPageToList(tab, url, listId, token, list) {
 function handleListSelection(list) {
   if (!listSelectionContext) return;
   setListUiDisabled(true);
-  setListStatus(`Saving to "${list.name}"...`);
+  setListStatus(msg("savingTo", `"${list.name}"`));
   return addPageToList(
     listSelectionContext.tab,
     listSelectionContext.url,
@@ -1742,7 +1750,7 @@ function handleListSelection(list) {
 function handleSavedListRemoval(list) {
   if (!listSelectionContext) return;
   setListUiDisabled(true);
-  setListStatus(`Removing from "${list.name}"...`);
+  setListStatus(msg("removingFrom", `"${list.name}"`));
   return removePageFromList(
     listSelectionContext.tab,
     listSelectionContext.url,
@@ -1817,7 +1825,7 @@ function handleTokenResult(tab, url, token) {
       renderReadingLists();
       setListUiDisabled(false);
       document.getElementById("listSearchInput").value = "";
-      setListStatus("Checking saved status...");
+      setListStatus(msg("checkingSaved"));
       return markListsWithEntryStatus(tab, url, allReadingLists)
         .then(updatedLists => {
           allReadingLists = updatedLists;
@@ -1847,9 +1855,9 @@ function handleClick(tab, url) {
           console.error("Unable to check Wikimedia site permission:", permissionError);
         }
         if (hasPermission === false) {
-          throw new Error(`The browser has not granted this extension access to ${url.hostname}. Enable site access in the extension's permissions and reopen the popup.`);
+          throw new Error(msg("missingSitePermission", url.hostname));
         }
-        throw new Error("Unable to connect to Wikimedia. Check your internet connection and the extension's site permissions, then reopen the popup.");
+        throw new Error(msg("networkError"));
       }
       throw err;
     })
@@ -1870,7 +1878,7 @@ function isSupportedPage(tab) {
     .sendMessage(tab.id, { type: "wikiExtensionGetPageNamespace" })
     .then(res => Boolean(res) && isSupportedNamespace(res.ns))
     .catch(() => {
-      throw new Error("Unable to access this page. Refresh the page and try again, and check the extension's site permissions.");
+      throw new Error(msg("pageAccessError"));
     });
 }
 

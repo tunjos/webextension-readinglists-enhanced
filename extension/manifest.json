@@ -1,8 +1,9 @@
 {
-  "name": "Wikipedia Reading Lists Enhanced",
-  "description": "Save Wikipedia articles to read on Wikipedia Web, iOS, and Android apps",
-  "short_description": "Save Wikipedia articles to read on Wikipedia Web, iOS, and Android apps",
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "short_description": "__MSG_extensionDescription__",
   "version": "1.3.3",
+  "default_locale": "en",
   "manifest_version": 3,
   "permissions": [
     "activeTab",
@@ -34,7 +35,7 @@
     }
   },
   "page_action": {
-    "default_title": "Save to a reading list",
+    "default_title": "__MSG_pageActionTitle__",
     "default_popup": "popup.html",
     "show_matches": [
       "https://*.wikipedia.org/*",
@@ -57,7 +58,7 @@
         "default": "Ctrl+Shift+A",
         "mac": "MacCtrl+Shift+A"
       },
-      "description": "Choose a reading list for the current page"
+      "description": "__MSG_commandDescription__"
     }
   },
   "browser_specific_settings": {

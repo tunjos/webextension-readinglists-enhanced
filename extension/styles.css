@@ -256,7 +256,7 @@ body {
   cursor: pointer;
   font: inherit;
   color: inherit;
-  text-align: left;
+  text-align: start;
 }
 .shareNetworkButton:hover {
   background: #fff;
@@ -386,7 +386,7 @@ body {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
-  text-align: left;
+  text-align: start;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -540,7 +540,7 @@ body {
 .articleButton {
   flex: 1 1 auto;
   min-width: 0;
-  text-align: left;
+  text-align: start;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -629,7 +629,7 @@ body {
   border-radius: 1px;
 }
 .moveTargetButton {
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   font: inherit;
   font-size: 0.95em;
@@ -670,11 +670,11 @@ body {
   position: absolute;
   width: 24px;
   height: 24px;
-  left: 16px;
+  inset-inline-start: 16px;
   top: 16px;
 }
 #addToListSuccessContainer {
-  padding-left: 40px;
+  padding-inline-start: 40px;
   color: #222;
 }
 #addToListSuccessContainer .subviewHeader,
