@@ -2,8 +2,8 @@
 
 ## Translation progress
 
-Eighteen translations cover all 99 English source messages. Including English,
-19 of the 181 locale codes in the matrix have a dedicated catalog, leaving 162
+Twenty-nine translations cover all 99 English source messages. Including English,
+30 of the 181 locale codes in the matrix have a dedicated catalog, leaving 151
 without one. Some of those locales can already use a bundled parent language.
 Coverage is the number of English message keys with a non-empty value in the
 locale's catalog.
@@ -14,19 +14,30 @@ locale's catalog.
 | `ar` | Arabic | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
 | `bn` | Bengali | 99/99 | Desktop Edge resolved `bn-IN` to this catalog | Pending |
 | `ca` | Catalan | 99/99 | Desktop Edge visual check, including catalog selection under its Valencian locale | Pending, including Valencian wording |
+| `cs` | Czech | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `da` | Danish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `de` | German | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `el` | Greek | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `es` | Spanish | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `fi` | Finnish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fr` | French | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `he` | Hebrew | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
 | `hi` | Hindi | 99/99 | Desktop Edge normalized the `hi-IN` launch preference to `hi` | Pending |
+| `id` | Indonesian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `it` | Italian | 99/99 | Maintainer confirmed a local test. Browser unspecified. | Pending |
 | `ja` | Japanese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `ko` | Korean | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `nl` | Dutch | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `pa_IN` | Punjabi (India, Gurmukhi) | 99/99 | Desktop Firefox selected `pa-IN` and displayed the localized unsupported-page message | Pending |
 | `pl` | Polish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_BR` | Brazilian Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_PT` | European Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `ru` | Russian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `sv` | Swedish | 99/99 | Desktop Edge normalized the `sv-SE` launch preference to `sv` | Pending |
+| `th` | Thai | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `tr` | Turkish | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `uk` | Ukrainian | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `vi` | Vietnamese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `zh_CN` | Simplified Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `zh_TW` | Traditional Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
 
