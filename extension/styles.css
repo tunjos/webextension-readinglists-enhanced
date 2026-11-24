@@ -682,9 +682,6 @@ body {
 #addToListFailedContainer .subviewHeader {
   margin-bottom: 10px;
 }
-.successTitle {
-  font-weight: bold;
-}
 #loginButton {
   font-family: Helvetica, Arial, sans-serif;
   font-size: 1em;

@@ -334,9 +334,8 @@ function getAllReadingLists(url, rlcontinue, lists) {
 
 function parseTitleFromUrl(href) {
   const url = new URL(href);
-  const rawTitle = url.searchParams.has("title")
-    ? url.searchParams.get("title")
-    : url.pathname.replace("/wiki/", "");
+  if (url.searchParams.has("title")) return url.searchParams.get("title");
+  const rawTitle = url.pathname.replace("/wiki/", "");
   try {
     return decodeURIComponent(rawTitle);
   } catch (err) {
@@ -825,81 +824,34 @@ function showLoginPrompt(tab, url) {
   );
 }
 
-function showListEntrySuccessMessage(tab, url, list, messageKey) {
-  return geti18nMessages(url.origin, [messageKey]).then(messages =>
-    getCanonicalPageTitle(tab).then(title => {
-      hide("createListContainer");
-      hide("updateListContainer");
-      hide("moveEntryContainer");
-      hide("listEntriesContainer");
-      hide("articleSummaryContainer");
-      hide("listSelectionContainer");
-      hide("shareContainer");
-      hide("tutorialContainer");
-      setUtilityBarHidden(true);
-      const placeholder = "$1";
-      const successTextContainer = document.getElementById("successText");
-      const titleText = decodeURIComponent(title).replace(/_/g, " ");
-      const titleElem = document.createElement("span");
-      titleElem.className = "successTitle";
-      titleElem.textContent = titleText;
-      const listName = list && list.name ? list.name : "reading";
-      let message = messages[messageKey];
-      message = message.replace(/<[^>]+>/g, "");
-      message = message
-        .replace(/\[\[\$2\|\$3\]\]/g, listName)
-        .replace("$2", listName)
-        .replace("$3", listName);
-      if (message.includes(placeholder)) {
-        successTextContainer.textContent = message;
-        const newTextNode = successTextContainer.firstChild.splitText(
-          message.indexOf(placeholder)
-        );
-        newTextNode.deleteData(0, placeholder.length);
-        successTextContainer.insertBefore(titleElem, newTextNode);
-      } else {
-        successTextContainer.textContent = message;
-      }
-      show("addToListSuccessContainer");
-    })
-  );
-}
-
-function showMoveEntrySuccessMessage(url, entry, targetList) {
-  return geti18nMessages(url.origin, [MESSAGE_KEYS.moveSuccess]).then(messages => {
-    hide("createListContainer");
-    hide("updateListContainer");
-    hide("moveEntryContainer");
-    hide("listEntriesContainer");
-    hide("articleSummaryContainer");
-    hide("listSelectionContainer");
-    hide("shareContainer");
-    hide("tutorialContainer");
-    setUtilityBarHidden(true);
-    const successTextContainer = document.getElementById("successText");
-    const placeholder = "$1";
-    const titleElem = document.createElement("span");
-    titleElem.className = "successTitle";
-    titleElem.textContent = normalizeArticleTitle(entry.title);
-    const targetListName =
-      targetList && targetList.name ? targetList.name : "reading";
-    let message = messages[MESSAGE_KEYS.moveSuccess] || "$1 moved to $2";
-    message = message.replace(/<[^>]+>/g, "").replace("$2", targetListName);
-    if (message.includes(placeholder)) {
-      successTextContainer.textContent = message;
-      const newTextNode = successTextContainer.firstChild.splitText(
-        message.indexOf(placeholder)
-      );
-      newTextNode.deleteData(0, placeholder.length);
-      successTextContainer.insertBefore(titleElem, newTextNode);
-    } else {
-      successTextContainer.textContent = message;
-    }
-    show("addToListSuccessContainer");
+function renderEntrySuccess(messageKey, title, list) {
+  hide("createListContainer");
+  hide("updateListContainer");
+  hide("moveEntryContainer");
+  hide("listEntriesContainer");
+  hide("articleSummaryContainer");
+  hide("listSelectionContainer");
+  hide("shareContainer");
+  hide("tutorialContainer");
+  setUtilityBarHidden(true);
+  const parts = msg(messageKey, ["$1", "$2"]).split(/(\$[12])/);
+  const nodes = parts.map(part => {
+    if (part !== "$1" && part !== "$2") return part;
+    const node = document.createElement("strong");
+    node.textContent = part === "$1" ? normalizeArticleTitle(title) : list.name;
+    return node;
   });
+  document.getElementById("successText").replaceChildren(...nodes);
+  show("addToListSuccessContainer");
 }
 
-function showAddToListFailureMessage(url, res) {
+function showListEntrySuccessMessage(tab, list, messageKey) {
+  return getCanonicalPageTitle(tab).then(title => renderEntrySuccess(messageKey, title, list));
+}
+
+function showAddToListFailureMessage(url, response) {
+  const res = response.error || response;
+  const code = res.code || res.title;
   return geti18nMessages(url.origin, [
     MESSAGE_KEYS.enableSync,
     MESSAGE_KEYS.infoLinkText,
@@ -919,19 +871,16 @@ function showAddToListFailureMessage(url, res) {
     document.getElementById("failureBackButton").style.display = listOverviewReady ? "inline-flex" : "none";
     document.getElementById("learnMoreLinkContainer").style.display = "none";
     let message;
-    if (res.title === "readinglists-db-error-not-set-up") {
+    if (code === "readinglists-db-error-not-set-up") {
       message = messages[MESSAGE_KEYS.enableSync];
       const learnMoreLink = document.getElementById("learnMoreLink");
       learnMoreLink.textContent = messages[MESSAGE_KEYS.infoLinkText];
       learnMoreLink.onclick = () =>
         browser.tabs.create({ url: learnMoreLink.href });
       document.getElementById("learnMoreLinkContainer").style.display = "block";
-    } else if (
-      res.code === "readinglists-db-error-list-limit" ||
-      res.title === "readinglists-db-error-list-limit"
-    ) {
+    } else if (code === "readinglists-db-error-list-limit") {
       message = messages[MESSAGE_KEYS.listLimitExceeded];
-    } else if (res.title === "readinglists-db-error-entry-limit") {
+    } else if (code === "readinglists-db-error-entry-limit") {
       const maxEntries = getEntryLimitFromError(res);
       message = maxEntries
         ? pluralMsg("entryLimitExceeded", maxEntries)
@@ -1004,7 +953,6 @@ function handleAddPageToListResult(tab, url, res, list) {
     setSavedRowUiState(list.id, true);
     return showListEntrySuccessMessage(
       tab,
-      url,
       list,
       MESSAGE_KEYS.addSuccess
     );
@@ -1100,7 +1048,7 @@ function getArticleSummary(entry) {
 }
 
 function normalizeEntryTitle(title) {
-  return decodeURIComponent(title || "")
+  return (title || "")
     .replace(/ /g, "_")
     .trim();
 }
@@ -1153,7 +1101,7 @@ function getAllReadingListEntries(url, listId, rlecontinue, entries, onProgress,
 }
 
 function normalizeArticleTitle(title) {
-  return decodeURIComponent(title || "").replace(/_/g, " ");
+  return (title || "").replace(/_/g, " ");
 }
 
 function buildArticleUrl(entry) {
@@ -1485,11 +1433,7 @@ function handleMoveEntryToList(targetList) {
       ).then(() => {
         updateListSize(targetList.id, 1);
         moveEntryContext = null;
-        return showMoveEntrySuccessMessage(
-          listSelectionContext.url,
-          entry,
-          targetList
-        );
+        return renderEntrySuccess(MESSAGE_KEYS.moveSuccess, entry.title, targetList);
       });
     })
     .catch(err => showAddToListFailureMessage(listSelectionContext.url, err))
@@ -1683,7 +1627,6 @@ function handleRemovePageFromListResult(tab, url, res, list) {
     setSavedRowUiState(list.id, false);
     return showListEntrySuccessMessage(
       tab,
-      url,
       list,
       MESSAGE_KEYS.removeSuccess
     );
