@@ -2,8 +2,11 @@
 
 ## Translation progress
 
-Six translations cover all 99 English source messages. Coverage is the number
-of English message keys with a non-empty value in the locale's catalog.
+Thirteen translations cover all 99 English source messages. Including English,
+14 of the 181 locale codes in the matrix have a dedicated catalog, leaving 167
+without one. Some of those locales can already use a bundled parent language.
+Coverage is the number of English message keys with a non-empty value in the
+locale's catalog.
 
 | Locale | Language | Coverage | Browser verification | Fluent-speaker review |
 | --- | --- | --- | --- | --- |
@@ -13,7 +16,14 @@ of English message keys with a non-empty value in the locale's catalog.
 | `es` | Spanish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fr` | French | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `it` | Italian | 99/99 | Maintainer confirmed a local test. Browser unspecified. | Pending |
+| `ja` | Japanese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `ko` | Korean | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `nl` | Dutch | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `pl` | Polish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_BR` | Brazilian Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `pt_PT` | European Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `zh_CN` | Simplified Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `zh_TW` | Traditional Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
 
 Update the coverage counts when the English catalog changes or a translation
 is added. Run `npm test` to validate catalog keys and placeholders, and record
