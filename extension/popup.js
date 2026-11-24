@@ -1391,7 +1391,7 @@ function removeEntryFromList(url, token, entry, list) {
 function handleViewedListEntryRemoval(entry) {
   if (!listSelectionContext || !currentViewedList) return;
   setListEntriesUiDisabled(true);
-  setListEntriesStatus(msg("removingArticle", `"${normalizeArticleTitle(entry.title)}"`));
+  setListEntriesStatus(msg("removingArticle", normalizeArticleTitle(entry.title)));
   return removeEntryFromList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1399,7 +1399,7 @@ function handleViewedListEntryRemoval(entry) {
     currentViewedList
   )
     .then(() => {
-      setListEntriesStatus(msg("removedArticle", `"${normalizeArticleTitle(entry.title)}"`));
+      setListEntriesStatus(msg("removedArticle", normalizeArticleTitle(entry.title)));
     })
     .catch(err => {
       setListEntriesStatus("");
@@ -1414,7 +1414,7 @@ function handleMoveEntryToList(targetList) {
   if (!listSelectionContext || !moveEntryContext) return;
   const { entry, sourceList } = moveEntryContext;
   setListEntriesUiDisabled(true);
-  setMoveEntryStatus(msg("movingTo", `"${targetList.name}"`));
+  setMoveEntryStatus(msg("movingTo", targetList.name));
   return addEntryToList(
     listSelectionContext.url,
     targetList.id,
@@ -1478,7 +1478,7 @@ function handleCreateReadingList() {
   }
 
   document.getElementById("createListSubmitButton").disabled = true;
-  setCreateListStatus(msg("creatingList", `"${name}"`));
+  setCreateListStatus(msg("creatingList", name));
   return createReadingList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1492,7 +1492,7 @@ function handleCreateReadingList() {
       nameInput.value = "";
       descriptionInput.value = "";
       showListSelection();
-      return reloadReadingLists(msg("createdList", `"${name}"`));
+      return reloadReadingLists(msg("createdList", name));
     })
     .catch(err => {
       setCreateListStatus("");
@@ -1505,13 +1505,13 @@ function handleCreateReadingList() {
 
 function handleReadingListDeletion(list) {
   if (!listSelectionContext) return;
-  const confirmed = window.confirm(msg("confirmDelete", `"${list.name}"`));
+  const confirmed = window.confirm(msg("confirmDelete", list.name));
   if (!confirmed) {
     return;
   }
 
   setListUiDisabled(true);
-  setListStatus(msg("deletingList", `"${list.name}"`));
+  setListStatus(msg("deletingList", list.name));
   return deleteReadingList(listSelectionContext.url, listSelectionContext.token, list.id)
     .then(res => {
       if (res && res.error) {
@@ -1525,7 +1525,7 @@ function handleReadingListDeletion(list) {
         currentSummaryEntry = null;
       }
       setDeleteMode(false);
-      return reloadReadingLists(msg("deletedList", `"${list.name}"`));
+      return reloadReadingLists(msg("deletedList", list.name));
     })
     .catch(err => {
       setDeleteMode(false);
@@ -1557,7 +1557,7 @@ function handleReadingListUpdate() {
   }
 
   document.getElementById("updateListSubmitButton").disabled = true;
-  setUpdateListStatus(msg("updatingList", `"${currentUpdatingList.name}"`));
+  setUpdateListStatus(msg("updatingList", currentUpdatingList.name));
   return updateReadingList(
     listSelectionContext.url,
     listSelectionContext.token,
@@ -1572,7 +1572,7 @@ function handleReadingListUpdate() {
       const previousName = currentUpdatingList.name;
       currentUpdatingList = null;
       showListSelection();
-      return reloadReadingLists(msg("updatedList", `"${previousName}"`));
+      return reloadReadingLists(msg("updatedList", previousName));
     })
     .catch(err => {
       setUpdateListStatus("");
@@ -1675,7 +1675,7 @@ function addPageToList(tab, url, listId, token, list) {
 function handleListSelection(list) {
   if (!listSelectionContext) return;
   setListUiDisabled(true);
-  setListStatus(msg("savingTo", `"${list.name}"`));
+  setListStatus(msg("savingTo", list.name));
   return addPageToList(
     listSelectionContext.tab,
     listSelectionContext.url,
@@ -1693,7 +1693,7 @@ function handleListSelection(list) {
 function handleSavedListRemoval(list) {
   if (!listSelectionContext) return;
   setListUiDisabled(true);
-  setListStatus(msg("removingFrom", `"${list.name}"`));
+  setListStatus(msg("removingFrom", list.name));
   return removePageFromList(
     listSelectionContext.tab,
     listSelectionContext.url,

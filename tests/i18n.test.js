@@ -24,6 +24,18 @@ function popupFunctions(names, globals = {}) {
   );
 }
 
+test("delete confirmation leaves quotation marks to the catalog", () => {
+  const danish = JSON.parse(fs.readFileSync(path.join(locales, "da", "messages.json"), "utf8"));
+  let prompt;
+  const { handleReadingListDeletion } = popupFunctions(["handleReadingListDeletion"], {
+    listSelectionContext: {},
+    msg: (key, name) => danish[key].message.replace("$1", () => name),
+    window: { confirm(text) { prompt = text; return false; } }
+  });
+  handleReadingListDeletion({ name: 'Rejser "2026"' });
+  assert.equal(prompt, 'Vil du slette listen »Rejser "2026"«?');
+});
+
 test("article titles decode once at the URL boundary, never during display or matching", () => {
   const { parseTitleFromUrl, normalizeArticleTitle, normalizeEntryTitle } = popupFunctions(
     ["parseTitleFromUrl", "normalizeArticleTitle", "normalizeEntryTitle"], { URL }
