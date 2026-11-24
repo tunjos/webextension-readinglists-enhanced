@@ -2,16 +2,18 @@
 
 ## Translation progress
 
-Four translations cover all 99 English source messages. Coverage is the number
+Six translations cover all 99 English source messages. Coverage is the number
 of English message keys with a non-empty value in the locale's catalog.
 
 | Locale | Language | Coverage | Browser verification | Fluent-speaker review |
 | --- | --- | --- | --- | --- |
 | `en` | English | 99/99 (source) | Source baseline | N/A |
+| `ar` | Arabic | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
 | `de` | German | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `es` | Spanish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fr` | French | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `it` | Italian | 99/99 | Maintainer confirmed a local test. Browser unspecified. | Pending |
+| `pt_BR` | Brazilian Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
 
 Update the coverage counts when the English catalog changes or a translation
 is added. Run `npm test` to validate catalog keys and placeholders, and record
