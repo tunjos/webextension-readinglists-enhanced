@@ -302,6 +302,7 @@ body {
 }
 .utilityBar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
   gap: 6px;
   margin-top: 8px;
