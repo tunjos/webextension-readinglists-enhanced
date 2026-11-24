@@ -2,10 +2,10 @@
 
 ## Translation progress
 
-Fifty-three translations cover all 99 English source messages. Including English
-and the shared Filipino catalog for `tl`, 55 of the 181 locale codes in the matrix
-have a bundled catalog, leaving 126 without one. Some of those locales can
-already use a bundled parent language.
+Sixty-five translated catalogs cover all 99 English source messages. Including
+English and the shared Filipino catalog for `tl`, 67 of the 181 locale codes in
+the matrix have a bundled catalog, leaving 114 without one. Some of those
+locales can already use a bundled parent language.
 Coverage is the number of English message keys with a non-empty value in the
 locale's catalog.
 
@@ -15,8 +15,10 @@ locale's catalog.
 | `af` | Afrikaans | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `am` | Amharic | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `ar` | Arabic | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
+| `az` | Azerbaijani | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `bg` | Bulgarian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `bn` | Bengali | 99/99 | Desktop Edge resolved `bn-IN` to this catalog | Pending |
+| `bs` | Bosnian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `ca` | Catalan | 99/99 | Desktop Edge visual check, including catalog selection under its Valencian locale | Pending, including Valencian wording |
 | `cs` | Czech | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `cy` | Welsh | 99/99 | Desktop Edge visual check with sample data | Pending |
@@ -30,14 +32,20 @@ locale's catalog.
 | `fi` | Finnish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fil` | Filipino | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fr` | French | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `gd` | Scottish Gaelic | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `gl` | Galician | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `gu` | Gujarati | 99/99 | Desktop Firefox resolved `gu-IN` to `gu`. Desktop Edge normalized `gu-IN` to `gu` and rendered the popup. | Pending |
 | `he` | Hebrew | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
 | `hi` | Hindi | 99/99 | Desktop Edge normalized the `hi-IN` launch preference to `hi` | Pending |
 | `hr` | Croatian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `hu` | Hungarian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `id` | Indonesian | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `is` | Icelandic | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `it` | Italian | 99/99 | Maintainer confirmed a local test. Browser unspecified. | Pending |
 | `ja` | Japanese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `ka` | Georgian | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `kk` | Kazakh | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `km` | Khmer | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `kn` | Kannada | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `ko` | Korean | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `lt` | Lithuanian | 99/99 | Desktop Edge visual check with sample data | Pending |
@@ -47,6 +55,7 @@ locale's catalog.
 | `ms` | Malay | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `nb` | Norwegian Bokmål | 99/99 | Desktop Edge selected `nb` for `nb` and `no`. Desktop Firefox resolved `nb-NO` to `nb`. | Pending |
 | `nl` | Dutch | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `nn` | Norwegian Nynorsk | 99/99 | Desktop Edge visual check. Desktop Firefox resolved `nn-NO` to `nn`. | Pending |
 | `pa_IN` | Punjabi (India, Gurmukhi) | 99/99 | Desktop Firefox selected `pa-IN` and displayed the localized unsupported-page message | Pending |
 | `pl` | Polish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_BR` | Brazilian Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
@@ -55,6 +64,9 @@ locale's catalog.
 | `ru` | Russian | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `sk` | Slovak | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `sl` | Slovenian | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `sq` | Albanian | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `sr` | Serbian Cyrillic | 99/99 | Desktop Edge displayed Cyrillic for `sr`, `sr-Cyrl-BA`, and `sr-Cyrl-RS`. Desktop Firefox displayed Cyrillic for `sr`. | Pending |
+| `sr_Latn_RS` | Serbian Latin | 99/99 | Desktop Edge displayed Latin for `sr-Latn-RS`. | Pending |
 | `sv` | Swedish | 99/99 | Desktop Edge normalized the `sv-SE` launch preference to `sv` | Pending |
 | `ta` | Tamil | 99/99 | Desktop Edge visual check, including wrapped footer buttons | Pending |
 | `te` | Telugu | 99/99 | Desktop Edge visual check with sample data | Pending |
