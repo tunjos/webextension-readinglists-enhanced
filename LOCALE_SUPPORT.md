@@ -2,8 +2,8 @@
 
 ## Translation progress
 
-Thirteen translations cover all 99 English source messages. Including English,
-14 of the 181 locale codes in the matrix have a dedicated catalog, leaving 167
+Eighteen translations cover all 99 English source messages. Including English,
+19 of the 181 locale codes in the matrix have a dedicated catalog, leaving 162
 without one. Some of those locales can already use a bundled parent language.
 Coverage is the number of English message keys with a non-empty value in the
 locale's catalog.
@@ -12,9 +12,13 @@ locale's catalog.
 | --- | --- | --- | --- | --- |
 | `en` | English | 99/99 (source) | Source baseline | N/A |
 | `ar` | Arabic | 99/99 | Desktop Edge visual check with right-to-left text and mixed-script sample data | Pending |
+| `bn` | Bengali | 99/99 | Desktop Edge resolved `bn-IN` to this catalog | Pending |
+| `ca` | Catalan | 99/99 | Desktop Edge visual check, including catalog selection under its Valencian locale | Pending, including Valencian wording |
 | `de` | German | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `el` | Greek | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `es` | Spanish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `fr` | French | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `hi` | Hindi | 99/99 | Desktop Edge normalized the `hi-IN` launch preference to `hi` | Pending |
 | `it` | Italian | 99/99 | Maintainer confirmed a local test. Browser unspecified. | Pending |
 | `ja` | Japanese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `ko` | Korean | 99/99 | Desktop Edge visual check with sample data | Pending |
@@ -22,6 +26,7 @@ locale's catalog.
 | `pl` | Polish | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_BR` | Brazilian Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `pt_PT` | European Portuguese | 99/99 | Desktop Edge visual check with sample data | Pending |
+| `sv` | Swedish | 99/99 | Desktop Edge normalized the `sv-SE` launch preference to `sv` | Pending |
 | `zh_CN` | Simplified Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
 | `zh_TW` | Traditional Chinese | 99/99 | Desktop Edge visual check with sample data | Pending |
 
